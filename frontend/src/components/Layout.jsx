@@ -26,6 +26,9 @@ export default function Layout() {
           <NavLink to="/dashboard" data-testid="nav-dashboard" className={({isActive}) => `topnav-link ${isActive ? "active" : ""}`}>
             Projects
           </NavLink>
+          <NavLink to="/integrations" data-testid="nav-integrations" className={({isActive}) => `topnav-link ${isActive ? "active" : ""}`}>
+            Integrations
+          </NavLink>
           <a href="https://support.singular.net/hc/en-us/categories/360002441132" target="_blank" rel="noreferrer" className="topnav-link inline-flex items-center gap-1.5">
             <BookOpen weight="bold" className="w-3.5 h-3.5" /> SDK Docs
           </a>

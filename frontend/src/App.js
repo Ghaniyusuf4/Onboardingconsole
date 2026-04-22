@@ -7,6 +7,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import ProjectDetail from "@/pages/ProjectDetail";
 import PublicShare from "@/pages/PublicShare";
+import Integrations from "@/pages/Integrations";
 import Layout from "@/components/Layout";
 
 const AuthCtx = createContext(null);
@@ -75,6 +76,7 @@ function AppRouter() {
       <Route element={<Protected><Layout /></Protected>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/integrations" element={<Integrations />} />
       </Route>
     </Routes>
   );

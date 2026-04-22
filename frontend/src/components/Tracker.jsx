@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CaretDown, CaretRight, ChatCircleDots } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, ChatCircleDots, ShieldCheck } from "@phosphor-icons/react";
 
 const STATUS_OPTIONS = ["open", "in_progress", "blocked", "closed"];
 const PRIORITY_OPTIONS = ["low", "medium", "high"];
@@ -34,7 +34,23 @@ const ownerAvatar = (owner) => {
   return AVATARS[i];
 };
 
-function TaskRow({ task, projectId, reload, commentCount = 0 }) {
+const APK_AUDITED_TASK_TITLE = "SDK Basic Integration";
+
+function ApkVerifiedBadge({ version, compact = false }) {
+  return (
+    <span
+      data-testid="apk-verified-badge"
+      title={`Singular SDK ${version ? `v${version} ` : ""}detected in uploaded APK`}
+      className={`inline-flex items-center gap-1 rounded-full border font-mono font-bold ${compact ? "px-1.5 py-0.5 text-[9px]" : "px-2 py-0.5 text-[10px]"}`}
+      style={{ background: "var(--sg-success-bg)", color: "#0A8E78", borderColor: "rgba(10, 142, 120, 0.3)" }}
+    >
+      <ShieldCheck weight="fill" className={compact ? "w-2.5 h-2.5" : "w-3 h-3"} />
+      {compact ? "APK" : `APK${version ? " v" + version : ""}`}
+    </span>
+  );
+}
+
+function TaskRow({ task, projectId, reload, commentCount = 0, apkAudit = {} }) {
   const [open, setOpen] = useState(false);
   const total = task.checklist.length;
   const done = task.checklist.filter(c => c.done).length;
@@ -57,8 +73,11 @@ function TaskRow({ task, projectId, reload, commentCount = 0 }) {
           </button>
         </TableCell>
         <TableCell className="font-medium text-[var(--sg-fg)]">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span>{task.title}</span>
+            {task.title === APK_AUDITED_TASK_TITLE && apkAudit.detected && (
+              <ApkVerifiedBadge version={apkAudit.version} />
+            )}
             {commentCount > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#FFB400]/15 text-[#B87D00] text-[10px] font-bold font-mono" data-testid={`task-comment-count-${task.id}`} title={`${commentCount} customer comment(s)`}>
                 <ChatCircleDots weight="fill" className="w-3 h-3" />
@@ -110,7 +129,7 @@ function TaskRow({ task, projectId, reload, commentCount = 0 }) {
   );
 }
 
-function PhaseColumn({ phase, projectId, reload, idx, commentCounts }) {
+function PhaseColumn({ phase, projectId, reload, idx, commentCounts, apkAudit }) {
   const closed = phase.tasks.filter(t => t.status === "closed").length;
   const pct = phase.tasks.length ? Math.round((closed / phase.tasks.length) * 100) : 0;
   return (
@@ -125,14 +144,14 @@ function PhaseColumn({ phase, projectId, reload, idx, commentCounts }) {
       <div className="progress-track mb-3"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
       <div className="space-y-2">
         {phase.tasks.map(t => (
-          <KanbanCard key={t.id} task={t} projectId={projectId} reload={reload} commentCount={commentCounts?.[t.id] || 0} />
+          <KanbanCard key={t.id} task={t} projectId={projectId} reload={reload} commentCount={commentCounts?.[t.id] || 0} apkAudit={apkAudit} />
         ))}
       </div>
     </div>
   );
 }
 
-function KanbanCard({ task, projectId, reload, commentCount = 0 }) {
+function KanbanCard({ task, projectId, reload, commentCount = 0, apkAudit = {} }) {
   const total = task.checklist.length;
   const done = task.checklist.filter(c => c.done).length;
   const updateStatus = async (status) => {
@@ -142,7 +161,12 @@ function KanbanCard({ task, projectId, reload, commentCount = 0 }) {
   return (
     <div data-testid={`kanban-card-${task.id}`} className="bg-white border border-[var(--sg-border)] rounded-md p-3 hover:shadow-md hover:border-[var(--sg-orange)] transition-all">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-sm font-medium text-[var(--sg-fg)] leading-snug flex-1">{task.title}</div>
+        <div className="text-sm font-medium text-[var(--sg-fg)] leading-snug flex-1">
+          {task.title}
+          {task.title === APK_AUDITED_TASK_TITLE && apkAudit.detected && (
+            <span className="ml-2 align-middle inline-block"><ApkVerifiedBadge version={apkAudit.version} compact /></span>
+          )}
+        </div>
         {commentCount > 0 && (
           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#FFB400]/15 text-[#B87D00] text-[10px] font-bold font-mono flex-shrink-0" title={`${commentCount} customer comment(s)`}>
             <ChatCircleDots weight="fill" className="w-2.5 h-2.5" />
@@ -165,7 +189,7 @@ function KanbanCard({ task, projectId, reload, commentCount = 0 }) {
   );
 }
 
-export default function Tracker({ project, reload, commentCounts = {} }) {
+export default function Tracker({ project, reload, commentCounts = {}, apkAudit = {} }) {
   return (
     <Tabs defaultValue="kanban" data-testid="tracker">
       <TabsList className="bg-white border border-[var(--sg-border)] p-1 h-auto">
@@ -175,7 +199,7 @@ export default function Tracker({ project, reload, commentCounts = {} }) {
       <TabsContent value="kanban" className="mt-4">
         <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
           {project.phases.map((p, idx) => (
-            <div key={p.id} className="snap-start"><PhaseColumn phase={p} projectId={project.id} reload={reload} idx={idx} commentCounts={commentCounts} /></div>
+            <div key={p.id} className="snap-start"><PhaseColumn phase={p} projectId={project.id} reload={reload} idx={idx} commentCounts={commentCounts} apkAudit={apkAudit} /></div>
           ))}
         </div>
       </TabsContent>
@@ -202,7 +226,7 @@ export default function Tracker({ project, reload, commentCounts = {} }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {phase.tasks.map((t) => <TaskRow key={t.id} task={t} projectId={project.id} reload={reload} commentCount={commentCounts?.[t.id] || 0} />)}
+                  {phase.tasks.map((t) => <TaskRow key={t.id} task={t} projectId={project.id} reload={reload} commentCount={commentCounts?.[t.id] || 0} apkAudit={apkAudit} />)}
                 </TableBody>
               </Table>
             </div>

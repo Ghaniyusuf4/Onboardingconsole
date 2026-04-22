@@ -184,7 +184,7 @@ export default function ProjectDetail() {
           ))}
         </TabsList>
         <TabsContent value="overview" className="proj-tab-content"><Overview project={project} /></TabsContent>
-        <TabsContent value="tracker" className="proj-tab-content"><Tracker project={project} reload={reload} commentCounts={commentCounts} /></TabsContent>
+        <TabsContent value="tracker" className="proj-tab-content"><Tracker project={project} reload={reload} commentCounts={commentCounts} apkAudit={{ detected: health?.apk_sdk_detected, version: health?.apk_sdk_version }} /></TabsContent>
         <TabsContent value="testing" className="proj-tab-content"><TestingConsole project={project} /></TabsContent>
         <TabsContent value="copilot" className="proj-tab-content"><SECopilot project={project} /></TabsContent>
         <TabsContent value="attribution" className="proj-tab-content"><Attribution project={project} /></TabsContent>

@@ -155,6 +155,107 @@ def test_apk_upload_audit_detects_singular():
     finally:
         requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
 
+# ---- Health score w/ APK signal (iter3) ----
+def test_health_fallback_zero_apks(project_id):
+    """With zero test runs and zero APKs, score equals progress (fallback branch)."""
+    # Fresh project with template so we have tasks but 0 progress & 0 apks
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_HealthZeroApk", "apply_template": True})
+    pid = r.json()["id"]
+    try:
+        h = requests.get(f"{BASE}/api/projects/{pid}/health", headers=H).json()
+        # New top-level fields
+        for k in ("apk_uploaded", "apk_sdk_detected", "apk_sdk_version", "apk_count"):
+            assert k in h, f"missing {k} in health: {h}"
+        assert h["apk_uploaded"] is False
+        assert h["apk_sdk_detected"] is False
+        assert h["apk_sdk_version"] is None
+        assert h["apk_count"] == 0
+        # Fallback branch: score equals progress
+        assert h["score"] == h["progress"]
+        # Breakdown includes 'APK SDK integrated' row w/ weight 10
+        br = h["breakdown"]
+        row = next((x for x in br if x["label"] == "APK SDK integrated"), None)
+        assert row is not None, f"missing APK SDK row: {br}"
+        assert row["weight"] == 10
+        assert row["value"] == 0
+        assert "no APK yet" in row["note"]
+        # Existing row weights should reflect the new split: 55 / 20 / 15 / 10
+        pp = next(x for x in br if x["label"] == "Phase progress")
+        sdk = next(x for x in br if x["label"] == "SDK test pass rate")
+        attr = next(x for x in br if x["label"] == "Attribution pass rate")
+        assert pp["weight"] == 55
+        assert sdk["weight"] == 20
+        assert attr["weight"] == 15
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
+def test_health_with_green_apk_50pct_progress():
+    """Green APK on 50%-progress project: score = round(0.55*50 + 0.20*50 + 0.15*50 + 0.10*100) = 55."""
+    # Fresh project, template=False so we control task count via patches; easier path: use template and close half.
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_Health50Green", "apply_template": True})
+    pid = r.json()["id"]
+    try:
+        tree = requests.get(f"{BASE}/api/projects/{pid}", headers=H).json()
+        all_tids = [t["id"] for p in tree["phases"] for t in p["tasks"]]
+        assert len(all_tids) > 0
+        half = len(all_tids) // 2
+        # Close exactly half the tasks
+        for tid in all_tids[:half]:
+            rr = requests.patch(f"{BASE}/api/projects/{pid}/tasks/{tid}", headers=H,
+                                json={"status": "closed"})
+            assert rr.status_code == 200
+        # Upload green-audit APK
+        apk_bytes = _make_fake_sdk_apk()
+        up = requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                           files={"file": ("g.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        assert up.status_code == 200
+        assert up.json()["audit"]["has_singular_sdk"] is True
+        # Re-fetch health
+        h = requests.get(f"{BASE}/api/projects/{pid}/health", headers=H).json()
+        assert h["apk_sdk_detected"] is True
+        assert h["apk_sdk_version"] == "12.3.1"
+        assert h["apk_count"] >= 1
+        # Progress should be close to 50 (integer division)
+        expected_progress = int((half / len(all_tids)) * 100)
+        assert h["progress"] == expected_progress
+        # Compute expected score: 0.55*p + 0.20*p + 0.15*p + 0.10*100 (test_runs & attr_runs are 0 so s_sdk=s_attr=progress)
+        expected_score = round(0.55 * expected_progress + 0.20 * expected_progress + 0.15 * expected_progress + 0.10 * 100)
+        assert h["score"] == expected_score, f"got {h['score']} expected {expected_score} (progress={expected_progress})"
+        if expected_progress == 50:
+            assert h["score"] == 55
+        # Breakdown row reflects detection
+        row = next(x for x in h["breakdown"] if x["label"] == "APK SDK integrated")
+        assert row["value"] == 100
+        assert "12.3.1" in row["note"]
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
+def test_projects_list_exposes_apk_fields():
+    """GET /api/projects returns apk_sdk_detected + apk_sdk_version per item."""
+    # Create a project + upload green APK so one item is known-detected
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_ListApkFields", "apply_template": False})
+    pid = r.json()["id"]
+    try:
+        apk_bytes = _make_fake_sdk_apk()
+        requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                      files={"file": ("g.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        rows = requests.get(f"{BASE}/api/projects", headers=H).json()
+        assert isinstance(rows, list) and len(rows) > 0
+        for it in rows:
+            assert "apk_sdk_detected" in it
+            assert "apk_sdk_version" in it
+        mine = next(x for x in rows if x["id"] == pid)
+        assert mine["apk_sdk_detected"] is True
+        assert mine["apk_sdk_version"] == "12.3.1"
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
 # ---- Singular test console & attribution (expect 4xx from upstream, but our API stores run) ----
 def test_singular_test_console(project_id):
     r = requests.post(f"{BASE}/api/singular/test-console", headers=H,

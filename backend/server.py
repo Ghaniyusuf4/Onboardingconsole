@@ -212,7 +212,7 @@ def build_default_phases() -> List[Phase]:
     return phases
 
 # ============ Health Score ============
-def compute_health(project: dict, runs: list, detailed: bool = False) -> dict:
+def compute_health(project: dict, runs: list, detailed: bool = False, apks: Optional[list] = None) -> dict:
     pid = project["id"]
     total = sum(len(p.get("tasks", [])) for p in project.get("phases", []))
     closed = sum(1 for p in project.get("phases", []) for t in p.get("tasks", []) if t.get("status") == "closed")
@@ -224,12 +224,22 @@ def compute_health(project: dict, runs: list, detailed: bool = False) -> dict:
     sdk_pass = int((sum(1 for r in test_runs if r.get("ok")) / len(test_runs)) * 100) if test_runs else None
     attr_pass = int((sum(1 for r in attr_runs if r.get("ok")) / len(attr_runs)) * 100) if attr_runs else None
 
-    if sdk_pass is None and attr_pass is None:
+    # APK-audit-derived signal: is the Singular SDK integrated in any uploaded build?
+    project_apks = [a for a in (apks or []) if a.get("project_id") == pid]
+    green_apks = [a for a in project_apks if (a.get("audit") or {}).get("has_singular_sdk")]
+    apk_uploaded = len(project_apks) > 0
+    apk_sdk_detected = len(green_apks) > 0
+    latest_green = max(green_apks, key=lambda a: a.get("uploaded_at", ""), default=None)
+    apk_sdk_version = (latest_green or {}).get("audit", {}).get("sdk_version") if latest_green else None
+    apk_signal = 100 if apk_sdk_detected else (0 if apk_uploaded else None)
+
+    if sdk_pass is None and attr_pass is None and apk_signal is None:
         score = progress
     else:
         s_sdk = sdk_pass if sdk_pass is not None else progress
         s_attr = attr_pass if attr_pass is not None else progress
-        score = round(0.60 * progress + 0.25 * s_sdk + 0.15 * s_attr)
+        s_apk = apk_signal if apk_signal is not None else progress
+        score = round(0.55 * progress + 0.20 * s_sdk + 0.15 * s_attr + 0.10 * s_apk)
     if blocked > 0:
         score = max(0, score - min(20, blocked * 5))
 
@@ -240,16 +250,21 @@ def compute_health(project: dict, runs: list, detailed: bool = False) -> dict:
         "tasks_total": total, "tasks_closed": closed, "blocked": blocked,
         "sdk_pass_rate": sdk_pass, "attribution_pass_rate": attr_pass,
         "sdk_runs": len(test_runs), "attribution_runs": len(attr_runs),
+        "apk_uploaded": apk_uploaded, "apk_sdk_detected": apk_sdk_detected,
+        "apk_sdk_version": apk_sdk_version, "apk_count": len(project_apks),
     }
     if detailed:
         base["breakdown"] = [
-            {"label": "Phase progress", "weight": 60, "value": progress},
-            {"label": "SDK test pass rate", "weight": 25,
+            {"label": "Phase progress", "weight": 55, "value": progress},
+            {"label": "SDK test pass rate", "weight": 20,
              "value": sdk_pass if sdk_pass is not None else 0,
              "note": "no runs yet" if sdk_pass is None else f"{len(test_runs)} run(s)"},
             {"label": "Attribution pass rate", "weight": 15,
              "value": attr_pass if attr_pass is not None else 0,
              "note": "no runs yet" if attr_pass is None else f"{len(attr_runs)} run(s)"},
+            {"label": "APK SDK integrated", "weight": 10,
+             "value": apk_signal if apk_signal is not None else 0,
+             "note": (f"v{apk_sdk_version}" if apk_sdk_version else ("detected" if apk_sdk_detected else ("not detected" if apk_uploaded else "no APK yet")))},
             {"label": "Blocked task penalty", "weight": 0,
              "value": -min(20, blocked * 5), "note": f"{blocked} blocked"},
         ]
@@ -341,15 +356,17 @@ async def list_projects(request: Request):
     docs = await db.projects.find({"user_id": user.user_id}, {"_id": 0}).to_list(500)
     # gather test run aggregates per project in one query
     runs = await db.test_runs.find({"user_id": user.user_id}, {"_id": 0, "project_id": 1, "kind": 1, "ok": 1}).to_list(5000)
+    apks = await db.apk_uploads.find({"user_id": user.user_id}, {"_id": 0, "project_id": 1, "audit": 1, "uploaded_at": 1}).to_list(2000)
     out = []
     for d in docs:
-        h = compute_health(d, runs)
+        h = compute_health(d, runs, apks=apks)
         out.append({
             "id": d["id"], "name": d["name"], "customer": d.get("customer"),
             "platform": d.get("platform"), "created_at": d.get("created_at"),
             "tasks_total": h["tasks_total"], "tasks_closed": h["tasks_closed"],
             "progress": h["progress"], "health_score": h["score"],
             "health_grade": h["grade"], "blocked": h["blocked"],
+            "apk_sdk_detected": h["apk_sdk_detected"], "apk_sdk_version": h["apk_sdk_version"],
         })
     return out
 
@@ -378,7 +395,8 @@ async def project_health(project_id: str, request: Request):
     if not doc:
         raise HTTPException(404, "Project not found")
     runs = await db.test_runs.find({"user_id": user.user_id, "project_id": project_id}, {"_id": 0}).to_list(2000)
-    return compute_health(doc, runs, detailed=True)
+    apks = await db.apk_uploads.find({"user_id": user.user_id, "project_id": project_id}, {"_id": 0}).to_list(500)
+    return compute_health(doc, runs, detailed=True, apks=apks)
 
 @api_router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, request: Request):
@@ -423,7 +441,8 @@ async def public_share_view(token: str):
     if not proj:
         raise HTTPException(404, "Share link not found or revoked")
     runs = await db.test_runs.find({"project_id": proj["id"]}, {"_id": 0}).to_list(2000)
-    health = compute_health(proj, runs, detailed=True)
+    apks = await db.apk_uploads.find({"project_id": proj["id"]}, {"_id": 0}).to_list(500)
+    health = compute_health(proj, runs, detailed=True, apks=apks)
     comments = await db.task_comments.find({"project_id": proj["id"]}, {"_id": 0}).to_list(1000)
     by_task: Dict[str, list] = {}
     for c in comments:
@@ -798,9 +817,10 @@ async def slack_command(request: Request,
         if not docs:
             return JSONResponse(slack_response("No projects yet."))
         runs = await db.test_runs.find({"user_id": user_id}, {"_id": 0, "project_id": 1, "kind": 1, "ok": 1}).to_list(5000)
+        apks = await db.apk_uploads.find({"user_id": user_id}, {"_id": 0, "project_id": 1, "audit": 1, "uploaded_at": 1}).to_list(2000)
         lines = []
         for d in docs:
-            h = compute_health(d, runs)
+            h = compute_health(d, runs, apks=apks)
             grade_emoji = {"A": ":star:", "B": ":large_blue_circle:", "C": ":blue_heart:", "D": ":orange_heart:", "F": ":red_circle:"}.get(h["grade"], ":white_circle:")
             lines.append(f"{grade_emoji} *{d['name']}* — {h['score']}/100 ({h['grade']}) · {h['tasks_closed']}/{h['tasks_total']} tasks · {d.get('customer','—')}")
         return JSONResponse(slack_response("*Your Onboarding Projects*\n" + "\n".join(lines)))
@@ -814,7 +834,8 @@ async def slack_command(request: Request,
 
         if sub == "health":
             runs = await db.test_runs.find({"project_id": proj["id"]}, {"_id": 0}).to_list(2000)
-            h = compute_health(proj, runs, detailed=True)
+            apks = await db.apk_uploads.find({"project_id": proj["id"]}, {"_id": 0}).to_list(500)
+            h = compute_health(proj, runs, detailed=True, apks=apks)
             blocks_text = "\n".join(
                 f"• {b['label']} · {b['weight']}% → *{b['value']}*" + (f" _{b['note']}_" if b.get("note") else "")
                 for b in h["breakdown"]

@@ -1,0 +1,41 @@
+{
+  "summary": "End-to-end testing of Singular Onboarding MVP - backend (15/15 pytest pass) and frontend (all critical flows pass). Session-cookie auth, projects CRUD with 8-phase template, task/checklist updates, APK upload to object storage, Singular Test Console + Attribution (graceful 4xx handling with test_run persistence), auth isolation between users - all working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/singular/test-console", "issue": "`status_code` uses fragile introspection: `r.status_code if 'r' in dir() and hasattr(r,'status_code') else None`. Works but `dir()` doesn't reflect local vars reliably - should use try/except with sentinel. Currently passes because network call succeeds even on upstream 404."},
+      {"endpoint": "/api/auth/session", "issue": "Accepts session_id from either header or JSON body but calls `await request.json()` even when body may be empty bytes for a missing-header request - raises JSONDecodeError returned as 500 in some clients instead of 400. Reproduced via POST with empty body returns 400 from FastAPI JSON parser which happens to be acceptable."},
+      {"endpoint": "/api/projects/{id}", "issue": "DELETE returns 200 ok even if project_id does not exist (no 404)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "New Project Dialog", "issues": ["Missing aria-describedby on DialogContent (a11y console warning)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Return 404 from DELETE /api/projects/{id} if not found",
+    "(Optional) Tighten status_code capture in /singular/test-console using try/except pattern like /singular/attribution",
+    "(Optional) Add DialogDescription to the New Project dialog for a11y"
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~520 lines - acceptable now but plan to split into routers (auth, projects, apk, singular) as it grows",
+    "TestRunCreate accepts api_key but endpoint uses sdk_key only; Attribution logs strip api_key from request - good practice, keep it",
+    "APK upload reads entire file into memory via await file.read(); fine for <200MB cap shown in UI but document the limit",
+    "init_storage() is global mutable state; OK for single process but won't survive worker restarts cleanly"
+  ],
+  "updated_files": ["/app/backend/tests/test_backend.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Seeded via mongosh: TOKEN=sess_t1_1776830425402 (user test-user-t1-1776830425401), TOKEN2=sess_t2_1776830425429 for isolation test.",
+  "seed_data_creation": "Two users + user_sessions inserted into test_database via mongosh per /app/auth_testing.md. Test projects TEST_UI_Proj and TEST_Proj created via API during tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend base URL via REACT_APP_BACKEND_URL. Auth via Authorization: Bearer <session_token> header OR session_token cookie. Playwright cookie injection works for domain onboard-console.preview.emergentagent.com with sameSite=None, secure=True, httpOnly=True. Singular upstream returns 404 HTML for fake keys - backend correctly stores ok=false test_run.",
+  "rca of the issue": "No blocking issues found. All 15 backend pytest tests pass; all 9 frontend UI flows (login render, dashboard load, project creation, project open, 5 tabs, tracker kanban/table status change, checklist toggle, testing console trigger with log, APK upload with list) pass."
+}

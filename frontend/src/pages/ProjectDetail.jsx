@@ -11,6 +11,7 @@ import TestingConsole from "@/components/TestingConsole";
 import Attribution from "@/components/Attribution";
 import ApkUpload from "@/components/ApkUpload";
 import Overview from "@/components/Overview";
+import CommentsTab from "@/components/CommentsTab";
 import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
 
 export default function ProjectDetail() {
@@ -19,15 +20,18 @@ export default function ProjectDetail() {
   const [health, setHealth] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareToken, setShareToken] = useState(null);
+  const [unread, setUnread] = useState(0);
 
   const reload = async () => {
-    const [pr, hr] = await Promise.all([
+    const [pr, hr, cr] = await Promise.all([
       api.get(`/projects/${id}`),
       api.get(`/projects/${id}/health`),
+      api.get(`/projects/${id}/comments`),
     ]);
     setProject(pr.data);
     setHealth(hr.data);
     setShareToken(pr.data.share_token || null);
+    setUnread(cr.data.unread || 0);
   };
   useEffect(() => { reload(); }, [id]);
 
@@ -105,12 +109,17 @@ export default function ProjectDetail() {
           <TabsTrigger data-testid="tab-testing" value="testing" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Live Testing</TabsTrigger>
           <TabsTrigger data-testid="tab-attribution" value="attribution" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Attribution</TabsTrigger>
           <TabsTrigger data-testid="tab-apk" value="apk" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">APK Uploads</TabsTrigger>
+          <TabsTrigger data-testid="tab-comments" value="comments" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none gap-2">
+            Comments
+            {unread > 0 && <span className="bg-[var(--sg-orange)] text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full" data-testid="comments-unread-badge">{unread}</span>}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-5"><Overview project={project} /></TabsContent>
         <TabsContent value="tracker" className="mt-5"><Tracker project={project} reload={reload} /></TabsContent>
         <TabsContent value="testing" className="mt-5"><TestingConsole project={project} /></TabsContent>
         <TabsContent value="attribution" className="mt-5"><Attribution project={project} /></TabsContent>
         <TabsContent value="apk" className="mt-5"><ApkUpload project={project} /></TabsContent>
+        <TabsContent value="comments" className="mt-5"><CommentsTab project={project} /></TabsContent>
       </Tabs>
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>

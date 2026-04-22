@@ -382,6 +382,7 @@ async def delete_project(project_id: str, request: Request):
     await db.projects.delete_one({"id": project_id, "user_id": user.user_id})
     await db.apk_uploads.delete_many({"project_id": project_id})
     await db.test_runs.delete_many({"project_id": project_id})
+    await db.task_comments.delete_many({"project_id": project_id})
     return {"ok": True}
 
 @api_router.patch("/projects/{project_id}/keys")
@@ -419,7 +420,10 @@ async def public_share_view(token: str):
         raise HTTPException(404, "Share link not found or revoked")
     runs = await db.test_runs.find({"project_id": proj["id"]}, {"_id": 0}).to_list(2000)
     health = compute_health(proj, runs, detailed=True)
-    # Strip sensitive fields (sdk_key, api_key, user_id)
+    comments = await db.task_comments.find({"project_id": proj["id"]}, {"_id": 0}).to_list(1000)
+    by_task: Dict[str, list] = {}
+    for c in comments:
+        by_task.setdefault(c["task_id"], []).append(c)
     safe_phases = []
     for p in proj.get("phases", []):
         safe_tasks = []
@@ -428,6 +432,7 @@ async def public_share_view(token: str):
                 "id": t["id"], "title": t["title"], "owner": t.get("owner"),
                 "status": t.get("status"), "priority": t.get("priority"),
                 "checklist": [{"id": c["id"], "label": c["label"], "done": c.get("done", False)} for c in t.get("checklist", [])],
+                "comments": sorted(by_task.get(t["id"], []), key=lambda x: x["created_at"]),
             })
         safe_phases.append({
             "id": p["id"], "name": p["name"], "description": p.get("description"),
@@ -438,6 +443,59 @@ async def public_share_view(token: str):
         "platform": proj.get("platform"), "created_at": proj.get("created_at"),
         "phases": safe_phases, "health": health,
     }
+
+class CommentIn(BaseModel):
+    task_id: str
+    author_name: str
+    body: str
+
+@api_router.post("/public/share/{token}/comments")
+async def add_public_comment(token: str, payload: CommentIn):
+    proj = await db.projects.find_one({"share_token": token}, {"_id": 0})
+    if not proj:
+        raise HTTPException(404, "Share link not found")
+    # Validate task belongs to project
+    found = any(t["id"] == payload.task_id for p in proj.get("phases", []) for t in p.get("tasks", []))
+    if not found:
+        raise HTTPException(404, "Task not found")
+    if not payload.body.strip() or not payload.author_name.strip():
+        raise HTTPException(400, "Author and body required")
+    rec = {
+        "id": str(uuid.uuid4()),
+        "project_id": proj["id"],
+        "task_id": payload.task_id,
+        "author_name": payload.author_name.strip()[:80],
+        "body": payload.body.strip()[:2000],
+        "source": "customer",
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.task_comments.insert_one(rec)
+    rec.pop("_id", None)
+    return rec
+
+@api_router.get("/projects/{project_id}/comments")
+async def list_comments(project_id: str, request: Request):
+    user = await get_current_user(request)
+    proj = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0, "phases": 1, "id": 1})
+    if not proj:
+        raise HTTPException(404, "Project not found")
+    comments = await db.task_comments.find({"project_id": project_id}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    # enrich with task title
+    title_by_id = {t["id"]: t["title"] for p in proj.get("phases", []) for t in p.get("tasks", [])}
+    for c in comments:
+        c["task_title"] = title_by_id.get(c["task_id"], "(unknown task)")
+    unread = sum(1 for c in comments if not c.get("read"))
+    return {"comments": comments, "unread": unread, "total": len(comments)}
+
+@api_router.patch("/projects/{project_id}/comments/{comment_id}")
+async def mark_comment_read(project_id: str, comment_id: str, request: Request):
+    user = await get_current_user(request)
+    proj = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0, "id": 1})
+    if not proj:
+        raise HTTPException(404, "Project not found")
+    await db.task_comments.update_one({"id": comment_id, "project_id": project_id}, {"$set": {"read": True}})
+    return {"ok": True}
 
 @api_router.patch("/projects/{project_id}/tasks/{task_id}")
 async def update_task(project_id: str, task_id: str, payload: TaskUpdate, request: Request):

@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 4 (refactor + re-audit): 25/25 backend pytest pass including 5 new tests (delete-unknown→404, single re-audit, single re-audit unknown→404, bulk re-audit-missing with DB-stripped audit, bulk all-present, auth isolation). Frontend verified: APK tab renders guidance + audit report, per-row 'Re-audit' link (data-testid reaudit-one-{id}) present for every uploaded APK and triggers successful re-audit. 'Re-audit older uploads' button (data-testid reaudit-missing-button) correctly appears only when at least one APK has audit missing/empty-findings, and disappears after bulk re-run (audit restored in DB with audit_updated_at). Tracker apk-verified-badge and Overview 'APK SDK integrated' row regressions still pass. server.py router refactor preserved behaviour 1:1 for every previously-passing route.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/projects/{id}/apks/re-audit-missing", "issue": "Returns 200 with rescanned=0/skipped=0 when the caller has no APKs in that project (auth isolation case). Arguably should 404 the project for unknown/other-user projects for symmetry with /api/projects/{id}. Low priority."},
+      {"endpoint": "/api/projects/{id}/apk", "issue": "(carried) full file read into memory before size guard — consider streaming or early size cap."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "APK Uploads tab", "issues": ["'Re-audit' link on each row is a plain underlined blue text — visually similar to an anchor; consider giving it a subtle button affordance or a hover background to make it clearly interactive."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional: (a) 404 the project-missing case on /apks/re-audit-missing for parity, (b) add streaming upload or upfront size cap on /apk, (c) give per-row Re-audit link a button-like hover affordance."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now a clean 54-line entrypoint — excellent. Route files are focused and 1:1 ports. deps.py is the only module importing motor/s3 — good separation.",
+    "apk.py::re_audit_missing_apks uses `async for` cursor iteration which is memory-efficient. 'needs' predicate `(not apk.get('audit') or not apk.get('audit',{}).get('findings'))` correctly covers both unset and crashed-audit cases.",
+    "re_audit_apk returns the mutated `apk` dict with audit+audit_updated_at patched in-memory — matches what was just written to Mongo (good). `_id` already excluded by projection.",
+    "projects.py delete_project now raises 404 on missing — matches DELETE-idempotency observability request from iter1 minor.",
+    "singular.py test_console: status_code now captured via a pre-declared variable (no more dir() introspection). Behaviour confirmed identical by existing test (ok=false upstream, run persisted).",
+    "ApkUpload.jsx: reauditMissing/reauditOne both call load() on success → UI refreshes correctly. Toast messaging distinguishes rescanned / skipped / failures. Button only renders when there's an actual missing audit — prevents noise.",
+    "Minor: reauditOne swallows errors as toast only (no row-level spinner). Fine for small audits (<1s) but a per-row 'Re-auditing…' would help if logic grows slower."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_backend.py"
+  ],
+  "success_rate": {"backend": "100% (25/25)", "frontend": "100% (all reaudit flows + regressions)"},
+  "test_credentials": "Seeded via mongosh: T1_TOKEN=sess_t1_1776839059510 (user test-user-t1-1776839059510), T2_TOKEN=sess_t2_1776839059568. Any prior sess_t1_*/sess_t2_* tokens from earlier iterations still valid — expiry set 7 days.",
+  "seed_data_creation": "2 users + 2 user_sessions via mongosh. Ephemeral TEST_* projects created and deleted by each test. Left behind from prior iters: TEST_Iter2_UI* (owned by iter2 test user) — safe to ignore.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run: T1_TOKEN=<t> T2_TOKEN=<t2> MONGO_URL=mongodb://localhost:27017 DB_NAME=test_database pytest /app/backend/tests/test_backend.py -v. New tests added in iter4: test_delete_project_unknown_returns_404, test_reaudit_single_apk, test_reaudit_single_unknown_returns_404, test_reaudit_missing_bulk (uses pymongo to $unset audit directly), test_reaudit_missing_all_present_returns_zero, test_reaudit_auth_isolation. Frontend testids to rely on: reaudit-missing-button (only when at least one apk has audit missing/empty-findings), reaudit-one-{apk_id} (per row). To exercise missing-branch end-to-end: upload an apk then `mongosh --eval 'db.getSiblingDB(\"test_database\").apk_uploads.updateOne({id:\"...\"},{$unset:{audit:\"\"}})'` and reload the APK tab.",
+  "rca of the issue": "No blockers. One testing gotcha (for next agent): after clicking the APK tab, wait ~2s before asserting on reaudit-missing-button — ApkUpload.jsx loads /apks on mount via useEffect, and the button is conditional on that fetch completing. Without the wait, query_selector returns None (false negative)."
+}

@@ -25,6 +25,31 @@ export default function ApkUpload({ project }) {
   };
   useEffect(() => { load(); }, [project.id]);
 
+  const [reauditBusy, setReauditBusy] = useState(false);
+  const reauditMissing = async () => {
+    setReauditBusy(true);
+    try {
+      const r = await api.post(`/projects/${project.id}/apks/re-audit-missing`);
+      const { rescanned, skipped, failures = [] } = r.data || {};
+      if (failures.length) toast.warning(`Re-audited ${rescanned}. ${failures.length} failed.`);
+      else if (rescanned === 0) toast.info(`All ${skipped} APK(s) already have a fresh audit.`);
+      else toast.success(`Re-audited ${rescanned} APK(s).`);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Re-audit failed");
+    } finally { setReauditBusy(false); }
+  };
+
+  const reauditOne = async (apkId) => {
+    try {
+      await api.post(`/projects/${project.id}/apks/${apkId}/re-audit`);
+      toast.success("APK re-audited");
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Re-audit failed");
+    }
+  };
+
   const upload = async (file) => {
     if (!file) return;
     if (!file.name.toLowerCase().endsWith(".apk") && !file.name.toLowerCase().endsWith(".aab")) {
@@ -129,6 +154,16 @@ export default function ApkUpload({ project }) {
             <h2>Uploaded APKs</h2>
             <p className="muted">Stored securely in object storage with metadata.</p>
           </div>
+          {files.some(f => !f.audit || !(f.audit.findings || []).length) && (
+            <button
+              data-testid="reaudit-missing-button"
+              onClick={reauditMissing}
+              disabled={reauditBusy}
+              className="button button-soft disabled:opacity-50"
+            >
+              {reauditBusy ? "Re-auditing…" : "Re-audit older uploads"}
+            </button>
+          )}
         </div>
         <div className="space-y-2">
           {files.length === 0 && <div className="text-sm text-[var(--sg-fg-3)] panel-soft p-8 text-center">No APKs uploaded yet.</div>}
@@ -147,6 +182,14 @@ export default function ApkUpload({ project }) {
                   : f.audit
                     ? <span className="badge badge-error">SDK not detected</span>
                     : <span className="badge badge-success"><CheckCircle weight="bold" className="w-3 h-3" />Stored</span>}
+                <button
+                  data-testid={`reaudit-one-${f.id}`}
+                  onClick={() => reauditOne(f.id)}
+                  className="text-xs text-[var(--sg-blue)] hover:underline font-medium"
+                  title="Re-run the static audit for this APK"
+                >
+                  Re-audit
+                </button>
               </div>
               {f.audit && <ApkAuditReport audit={f.audit} />}
             </div>

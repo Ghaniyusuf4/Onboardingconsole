@@ -295,3 +295,138 @@ def test_delete_project_cascade():
     assert d.status_code == 200
     g = requests.get(f"{BASE}/api/projects/{pid}", headers=H)
     assert g.status_code == 404
+
+
+def test_delete_project_unknown_returns_404():
+    """iter4: deleting an unknown project id must return 404 (was 200 previously)."""
+    r = requests.delete(f"{BASE}/api/projects/does-not-exist-xyz-123", headers=H)
+    assert r.status_code == 404, r.text
+
+
+# ---- iter4: re-audit endpoints ----
+from pymongo import MongoClient  # noqa: E402
+
+def _mongo():
+    url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
+    dbname = os.environ.get("DB_NAME", "test_database")
+    return MongoClient(url)[dbname]
+
+
+def test_reaudit_single_apk():
+    """POST /api/projects/{id}/apks/{apk_id}/re-audit → re-runs audit + persists audit_updated_at."""
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_ReauditOne", "apply_template": False})
+    pid = r.json()["id"]
+    try:
+        apk_bytes = _make_fake_sdk_apk()
+        up = requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                           files={"file": ("sdk.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        assert up.status_code == 200
+        apk_id = up.json()["id"]
+        # Re-audit
+        re = requests.post(f"{BASE}/api/projects/{pid}/apks/{apk_id}/re-audit", headers=H)
+        assert re.status_code == 200, re.text
+        d = re.json()
+        assert d["id"] == apk_id
+        assert "audit" in d and d["audit"].get("has_singular_sdk") is True
+        assert "audit_updated_at" in d and d["audit_updated_at"]
+        # Verify persistence via list
+        rows = requests.get(f"{BASE}/api/projects/{pid}/apks", headers=H).json()
+        row = next(a for a in rows if a["id"] == apk_id)
+        assert row.get("audit_updated_at")
+        assert "_id" not in row
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
+def test_reaudit_single_unknown_returns_404():
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_Reaudit404", "apply_template": False})
+    pid = r.json()["id"]
+    try:
+        re = requests.post(f"{BASE}/api/projects/{pid}/apks/does-not-exist/re-audit", headers=H)
+        assert re.status_code == 404
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
+def test_reaudit_missing_bulk():
+    """Bulk re-audit: strip audit from one apk via Mongo then hit bulk endpoint."""
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_ReauditBulk", "apply_template": False})
+    pid = r.json()["id"]
+    try:
+        apk_bytes = _make_fake_sdk_apk()
+        # Upload two APKs — both will have audit after upload.
+        up1 = requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                            files={"file": ("a.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        up2 = requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                            files={"file": ("b.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        id1 = up1.json()["id"]
+        id2 = up2.json()["id"]
+        # Strip `audit` from the first via Mongo to simulate legacy pre-audit upload
+        mdb = _mongo()
+        res = mdb.apk_uploads.update_one({"id": id1}, {"$unset": {"audit": ""}})
+        assert res.modified_count == 1
+        # Confirm stripped
+        doc = mdb.apk_uploads.find_one({"id": id1})
+        assert "audit" not in doc or not doc.get("audit")
+        # Call bulk re-audit
+        rr = requests.post(f"{BASE}/api/projects/{pid}/apks/re-audit-missing", headers=H)
+        assert rr.status_code == 200, rr.text
+        body = rr.json()
+        assert set(body.keys()) >= {"rescanned", "skipped", "failures"}
+        assert body["rescanned"] >= 1, body
+        assert body["skipped"] >= 1, body  # the one that still had audit
+        assert isinstance(body["failures"], list)
+        # Verify the stripped one now has audit
+        rows = requests.get(f"{BASE}/api/projects/{pid}/apks", headers=H).json()
+        r1 = next(a for a in rows if a["id"] == id1)
+        assert r1.get("audit") and r1["audit"].get("has_singular_sdk") is True
+        assert r1.get("audit_updated_at")
+        # The never-stripped one shouldn't have audit_updated_at set (it was skipped)
+        r2 = next(a for a in rows if a["id"] == id2)
+        # Skipped rows should not get audit_updated_at
+        assert "audit_updated_at" not in r2 or r2.get("audit_updated_at") in (None, "")
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
+def test_reaudit_missing_all_present_returns_zero():
+    """If every APK already has audit+findings, rescanned=0 and skipped=count."""
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_ReauditNone", "apply_template": False})
+    pid = r.json()["id"]
+    try:
+        apk_bytes = _make_fake_sdk_apk()
+        requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                      files={"file": ("x.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        rr = requests.post(f"{BASE}/api/projects/{pid}/apks/re-audit-missing", headers=H)
+        assert rr.status_code == 200
+        body = rr.json()
+        assert body["rescanned"] == 0
+        assert body["skipped"] >= 1
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)
+
+
+def test_reaudit_auth_isolation():
+    """Other user cannot re-audit my APKs."""
+    r = requests.post(f"{BASE}/api/projects", headers=H,
+                      json={"name": "TEST_ReauditIso", "apply_template": False})
+    pid = r.json()["id"]
+    try:
+        apk_bytes = _make_fake_sdk_apk()
+        up = requests.post(f"{BASE}/api/projects/{pid}/apk", headers=H,
+                           files={"file": ("i.apk", io.BytesIO(apk_bytes), "application/vnd.android.package-archive")})
+        apk_id = up.json()["id"]
+        # T2 tries single re-audit → should 404 (not visible)
+        r_single = requests.post(f"{BASE}/api/projects/{pid}/apks/{apk_id}/re-audit", headers=H2)
+        assert r_single.status_code == 404
+        # T2 bulk → returns zero since no apks of theirs
+        r_bulk = requests.post(f"{BASE}/api/projects/{pid}/apks/re-audit-missing", headers=H2)
+        assert r_bulk.status_code == 200
+        assert r_bulk.json()["rescanned"] == 0
+        assert r_bulk.json()["skipped"] == 0
+    finally:
+        requests.delete(f"{BASE}/api/projects/{pid}", headers=H)

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowSquareOut, Robot, Lightning, Lightbulb, Copy } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
-const COPILOT_URL = "https://onboarding-copilot.pages.dev/";
+const COPILOT_URL = process.env.REACT_APP_COPILOT_URL || "https://onboarding-copilot.pages.dev/";
 
 const STARTER_PROMPTS = [
   { title: "Onboarding Checklist", desc: "Full step-by-step sequence" },

@@ -47,6 +47,7 @@ export default function PublicShare() {
   const total = data.phases.reduce((s, p) => s + p.tasks.length, 0);
   const closed = data.phases.reduce((s, p) => s + p.tasks.filter(t => t.status === "closed").length, 0);
   const pct = total ? Math.round((closed / total) * 100) : 0;
+  const totalComments = data.phases.reduce((s, p) => s + p.tasks.reduce((s2, t) => s2 + (t.comments?.length || 0), 0), 0);
 
   return (
     <div className="min-h-screen bg-[var(--sg-bg)]" data-testid="public-share">
@@ -99,11 +100,21 @@ export default function PublicShare() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="badge badge-info">Two-way collaboration</span>
+                  {totalComments === 0 ? (
+                    <span className="badge badge-warning">Be the first</span>
+                  ) : (
+                    <span className="badge badge-info">{totalComments} comment{totalComments === 1 ? "" : "s"} sent</span>
+                  )}
                 </div>
-                <h2 className="font-display font-bold text-xl text-[var(--sg-fg)]">Got questions or blockers? Tell your CSM.</h2>
+                <h2 className="font-display font-bold text-xl text-[var(--sg-fg)]">
+                  {totalComments === 0
+                    ? "No comments yet — be the first to message your CSM."
+                    : "Got questions or blockers? Tell your CSM."}
+                </h2>
                 <p className="text-sm text-[var(--sg-fg-2)] mt-1.5 max-w-2xl">
-                  Click <strong>Add comment</strong> on any task below to send a message directly to your Customer Success Manager. They'll see it instantly in their tracker — no email needed.
+                  {totalComments === 0
+                    ? <>This project hasn't received any customer comments yet. Click <strong>Add comment</strong> on any task below — your CSM gets notified instantly, no email needed.</>
+                    : <>Click <strong>Add comment</strong> on any task below to send a message directly to your Customer Success Manager. They'll see it instantly in their tracker — no email needed.</>}
                 </p>
               </div>
               <a href="#tasks" className="button button-primary h-10 hidden md:inline-flex">

@@ -35,6 +35,7 @@ export default function ProjectDetail() {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareToken, setShareToken] = useState(null);
   const [unread, setUnread] = useState(0);
+  const [commentCounts, setCommentCounts] = useState({});
 
   const reload = async () => {
     const [pr, hr, cr] = await Promise.all([
@@ -46,6 +47,11 @@ export default function ProjectDetail() {
     setHealth(hr.data);
     setShareToken(pr.data.share_token || null);
     setUnread(cr.data.unread || 0);
+    const counts = {};
+    for (const c of cr.data.comments || []) {
+      counts[c.task_id] = (counts[c.task_id] || 0) + 1;
+    }
+    setCommentCounts(counts);
   };
   useEffect(() => { reload(); }, [id]);
 
@@ -178,7 +184,7 @@ export default function ProjectDetail() {
           ))}
         </TabsList>
         <TabsContent value="overview" className="proj-tab-content"><Overview project={project} /></TabsContent>
-        <TabsContent value="tracker" className="proj-tab-content"><Tracker project={project} reload={reload} /></TabsContent>
+        <TabsContent value="tracker" className="proj-tab-content"><Tracker project={project} reload={reload} commentCounts={commentCounts} /></TabsContent>
         <TabsContent value="testing" className="proj-tab-content"><TestingConsole project={project} /></TabsContent>
         <TabsContent value="copilot" className="proj-tab-content"><SECopilot project={project} /></TabsContent>
         <TabsContent value="attribution" className="proj-tab-content"><Attribution project={project} /></TabsContent>

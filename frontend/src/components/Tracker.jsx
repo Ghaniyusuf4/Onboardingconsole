@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CaretDown, CaretRight } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, ChatCircleDots } from "@phosphor-icons/react";
 
 const STATUS_OPTIONS = ["open", "in_progress", "blocked", "closed"];
 const PRIORITY_OPTIONS = ["low", "medium", "high"];
@@ -34,7 +34,7 @@ const ownerAvatar = (owner) => {
   return AVATARS[i];
 };
 
-function TaskRow({ task, projectId, reload }) {
+function TaskRow({ task, projectId, reload, commentCount = 0 }) {
   const [open, setOpen] = useState(false);
   const total = task.checklist.length;
   const done = task.checklist.filter(c => c.done).length;
@@ -56,7 +56,17 @@ function TaskRow({ task, projectId, reload }) {
             {open ? <CaretDown weight="bold" /> : <CaretRight weight="bold" />}
           </button>
         </TableCell>
-        <TableCell className="font-medium text-[var(--sg-fg)]">{task.title}</TableCell>
+        <TableCell className="font-medium text-[var(--sg-fg)]">
+          <div className="flex items-center gap-2">
+            <span>{task.title}</span>
+            {commentCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#FFB400]/15 text-[#B87D00] text-[10px] font-bold font-mono" data-testid={`task-comment-count-${task.id}`} title={`${commentCount} customer comment(s)`}>
+                <ChatCircleDots weight="fill" className="w-3 h-3" />
+                {commentCount}
+              </span>
+            )}
+          </div>
+        </TableCell>
         <TableCell>
           {task.owner && (
             <div className="flex items-center gap-2">
@@ -100,7 +110,7 @@ function TaskRow({ task, projectId, reload }) {
   );
 }
 
-function PhaseColumn({ phase, projectId, reload, idx }) {
+function PhaseColumn({ phase, projectId, reload, idx, commentCounts }) {
   const closed = phase.tasks.filter(t => t.status === "closed").length;
   const pct = phase.tasks.length ? Math.round((closed / phase.tasks.length) * 100) : 0;
   return (
@@ -115,14 +125,14 @@ function PhaseColumn({ phase, projectId, reload, idx }) {
       <div className="progress-track mb-3"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
       <div className="space-y-2">
         {phase.tasks.map(t => (
-          <KanbanCard key={t.id} task={t} projectId={projectId} reload={reload} />
+          <KanbanCard key={t.id} task={t} projectId={projectId} reload={reload} commentCount={commentCounts?.[t.id] || 0} />
         ))}
       </div>
     </div>
   );
 }
 
-function KanbanCard({ task, projectId, reload }) {
+function KanbanCard({ task, projectId, reload, commentCount = 0 }) {
   const total = task.checklist.length;
   const done = task.checklist.filter(c => c.done).length;
   const updateStatus = async (status) => {
@@ -131,7 +141,15 @@ function KanbanCard({ task, projectId, reload }) {
   };
   return (
     <div data-testid={`kanban-card-${task.id}`} className="bg-white border border-[var(--sg-border)] rounded-md p-3 hover:shadow-md hover:border-[var(--sg-orange)] transition-all">
-      <div className="text-sm font-medium text-[var(--sg-fg)] leading-snug">{task.title}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-sm font-medium text-[var(--sg-fg)] leading-snug flex-1">{task.title}</div>
+        {commentCount > 0 && (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#FFB400]/15 text-[#B87D00] text-[10px] font-bold font-mono flex-shrink-0" title={`${commentCount} customer comment(s)`}>
+            <ChatCircleDots weight="fill" className="w-2.5 h-2.5" />
+            {commentCount}
+          </span>
+        )}
+      </div>
       <div className="flex items-center justify-between mt-2.5">
         <span className={PRIORITY_BADGE[task.priority]}>{task.priority}</span>
         {total > 0 && <span className="font-mono text-[10px] text-[var(--sg-fg-3)]">{done}/{total}</span>}
@@ -147,7 +165,7 @@ function KanbanCard({ task, projectId, reload }) {
   );
 }
 
-export default function Tracker({ project, reload }) {
+export default function Tracker({ project, reload, commentCounts = {} }) {
   return (
     <Tabs defaultValue="kanban" data-testid="tracker">
       <TabsList className="bg-white border border-[var(--sg-border)] p-1 h-auto">
@@ -157,7 +175,7 @@ export default function Tracker({ project, reload }) {
       <TabsContent value="kanban" className="mt-4">
         <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
           {project.phases.map((p, idx) => (
-            <div key={p.id} className="snap-start"><PhaseColumn phase={p} projectId={project.id} reload={reload} idx={idx} /></div>
+            <div key={p.id} className="snap-start"><PhaseColumn phase={p} projectId={project.id} reload={reload} idx={idx} commentCounts={commentCounts} /></div>
           ))}
         </div>
       </TabsContent>
@@ -184,7 +202,7 @@ export default function Tracker({ project, reload }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {phase.tasks.map((t) => <TaskRow key={t.id} task={t} projectId={project.id} reload={reload} />)}
+                  {phase.tasks.map((t) => <TaskRow key={t.id} task={t} projectId={project.id} reload={reload} commentCount={commentCounts?.[t.id] || 0} />)}
                 </TableBody>
               </Table>
             </div>

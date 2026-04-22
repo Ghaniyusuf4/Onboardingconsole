@@ -1,0 +1,146 @@
+{
+  "theme": "light",
+  "archetype": "Archetype 4 (Swiss & High-Contrast)",
+  "typography": {
+    "headings": {
+      "fontFamily": "'Chivo', sans-serif",
+      "weights": ["400", "700", "900"],
+      "classes": "font-sans font-bold tracking-tight text-zinc-950"
+    },
+    "body": {
+      "fontFamily": "'IBM Plex Sans', sans-serif",
+      "weights": ["400", "500", "600"],
+      "classes": "font-sans text-zinc-800 leading-relaxed"
+    },
+    "monospace": {
+      "fontFamily": "'JetBrains Mono', monospace",
+      "weights": ["400", "600"],
+      "classes": "font-mono text-sm tracking-tight"
+    },
+    "labels_eyebrows": {
+      "classes": "text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500"
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#FFFFFF",
+      "secondary": "#F4F4F5",
+      "tertiary": "#E4E4E7"
+    },
+    "text": {
+      "primary": "#09090B",
+      "secondary": "#52525B",
+      "muted": "#A1A1AA"
+    },
+    "brand": {
+      "primary": "#0055FF",
+      "primary_hover": "#003BCC",
+      "accent": "#002FA7"
+    },
+    "status": {
+      "success": "#00C853",
+      "success_bg": "#DCFCE7",
+      "error": "#FF3B30",
+      "error_bg": "#FEE2E2",
+      "warning": "#FFCC00",
+      "warning_bg": "#FEF9C3",
+      "info": "#0055FF",
+      "info_bg": "#DBEAFE"
+    },
+    "border": {
+      "default": "#E4E4E7",
+      "focus": "#0055FF"
+    }
+  },
+  "layout": {
+    "spacing_system": "Generous Spacing Philosophy. Use p-6 to p-8 inside cards, gap-6 for grids. Maintain optical alignment.",
+    "page_structure": "Fixed sidebar navigation (w-64) with a flexible main content area. Top header sticky with backdrop-blur-md, housing breadcrumbs and user profile.",
+    "grid_modes": {
+      "dashboard": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6. Follow 'The Control Room' protocol. High density, no wasted space.",
+      "kanban": "flex flex-nowrap overflow-x-auto gap-4 pb-4 items-start. Use snap-x snap-mandatory for better touch scrolling.",
+      "workflow_strip": "grid grid-cols-1 md:grid-cols-3 gap-0 border border-zinc-200 rounded-lg divide-y md:divide-y-0 md:divide-x divide-zinc-200"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#0055FF] text-white hover:bg-[#003BCC] shadow-sm rounded-md px-4 py-2 font-medium transition-colors",
+      "secondary": "bg-white text-zinc-900 border border-zinc-200 hover:bg-zinc-50 shadow-sm rounded-md px-4 py-2 font-medium transition-colors",
+      "destructive": "bg-[#FF3B30] text-white hover:bg-[#CC2F26] shadow-sm rounded-md px-4 py-2 font-medium transition-colors",
+      "ghost": "bg-transparent text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md px-4 py-2 font-medium transition-colors"
+    },
+    "cards": {
+      "panel": "bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden",
+      "metric": "bg-white border border-zinc-200 rounded-xl p-6 shadow-sm flex flex-col gap-2 transition-transform hover:-translate-y-0.5",
+      "kanban_task": "bg-white border border-zinc-200 rounded-lg p-4 shadow-sm hover:shadow-md hover:border-zinc-300 cursor-pointer transition-all",
+      "terminal_console": "bg-zinc-950 rounded-xl p-4 border border-zinc-800 text-[#00C853] font-mono overflow-y-auto h-full min-h-[400px] shadow-inner"
+    },
+    "badges": {
+      "neutral": "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-700 border border-zinc-200",
+      "success": "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#DCFCE7] text-[#166534] border border-[#BBF7D0]",
+      "pending": "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#FEF9C3] text-[#854D0E] border border-[#FEF08A]"
+    },
+    "progress_bars": {
+      "container": "h-2 w-full bg-zinc-100 rounded-full overflow-hidden",
+      "fill": "h-full bg-[#0055FF] rounded-full transition-all duration-500 ease-in-out"
+    },
+    "inputs": {
+      "text": "flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#0055FF] focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50",
+      "dropzone": "border-2 border-dashed border-zinc-300 hover:border-[#0055FF] bg-zinc-50/50 hover:bg-[#0055FF]/5 rounded-xl p-10 flex flex-col items-center justify-center transition-colors cursor-pointer text-center"
+    }
+  },
+  "motion": {
+    "hover": "transition-all duration-200 ease-in-out",
+    "modals": "animate-in fade-in zoom-in-95 duration-200",
+    "kanban_drag": "scale-105 shadow-xl rotate-2 transition-transform duration-200"
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "weight": "regular",
+    "usage": "Use icons for sidebar nav, metric cards, status indicators, and button prefixes. Keep them sized at 20px (w-5 h-5) for body context and 24px (w-6 h-6) for prominent UI elements."
+  },
+  "media": {
+    "avatars": [
+      {
+        "category": "team_member_1",
+        "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3Njc5NjAzM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Avatar for task owners"
+      },
+      {
+        "category": "team_member_2",
+        "url": "https://images.unsplash.com/photo-1762522926157-bcc04bf0b10a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3Njc5NjAzM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Avatar for task owners"
+      },
+      {
+        "category": "team_member_3",
+        "url": "https://images.unsplash.com/photo-1769636929388-99eff95d3bf1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3Njc5NjAzM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Avatar for task owners"
+      },
+      {
+        "category": "team_member_4",
+        "url": "https://images.unsplash.com/photo-1672685667592-0392f458f46f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3Njc5NjAzM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Avatar for task owners"
+      }
+    ]
+  },
+  "specific_patterns": {
+    "login_screen": "Minimalist split screen. Left side: Stark white background, Google OAuth login button, centered with high-end typography (Chivo font). Right side: A solid #F4F4F5 panel displaying an abstract data geometric pattern or brand primary color fill.",
+    "numbered_step_grid": "Use a flex or grid container for steps (1 to 5). Each step has a circular number indicator (bg-zinc-100 text-zinc-500, active: bg-[#0055FF] text-white). Connect steps with a thin line. Used for Onboarding Phase tracking.",
+    "live_testing_console": "Split layout. Left pane: Form for API keys, device inputs, and Trigger Event actions. Right pane: Terminal UI displaying real-time JSON logs, styled with bg-zinc-950 and text-[#00C853] using JetBrains Mono. Include timestamp badges on log rows.",
+    "attribution_verification": "Structured data panel. Use Table or Description List to map API responses. Utilize Success/Error badges next to expected event parameters.",
+    "apk_upload": "Prominent drag-and-drop zone with a dashed border. Include a large upload icon, 'Browse or drag and drop' typography, and a sub-label 'Max size 200MB'. On file select, transition to an upload progress card displaying the file size and a progress fill.",
+    "project_tracker": "Dual view approach: Tabs for 'Kanban' and 'Table'. Kanban features vertical columns mapped to the 8 phases. Table view acts as an intricate spreadsheet for CSMs using standard Shadcn tables with dense rows."
+  },
+  "testing_attributes": {
+    "guideline": "All interactive elements, forms, cards, and distinct UI blocks MUST include data-testid attributes formatted in kebab-case representing their role. Examples: data-testid='upload-apk-dropzone', data-testid='kanban-task-card', data-testid='trigger-event-button'."
+  },
+  "instructions_to_main_agent": [
+    "Install Google Fonts for 'Chivo', 'IBM Plex Sans', and 'JetBrains Mono' via standard import in index.css.",
+    "Install `@phosphor-icons/react` and use it exclusively for all system icons.",
+    "Use Shadcn components extensively (Dialog, Button, Input, Progress, Tabs, Table) but customize them: reduce standard border-radius to md/lg, replace generic ring colors with brand primary #0055FF, and enforce sharp 1px borders (#E4E4E7).",
+    "For the Kanban board, build a custom flex layout with horizontal scroll. Do not force Shadcn tables for the Kanban view, keep Shadcn tables only for the Table view mode.",
+    "The Testing Console MUST have a dark 'terminal' aesthetic for the log output area, contrasting the overall Light Theme of the app to provide a clear technical focus area.",
+    "Implement 'Eyebrow' text (text-xs uppercase tracking-[0.2em]) extensively above inputs, metrics, and distinct panel sections to enforce the authoritative SaaS aesthetic.",
+    "Map the provided Unsplash avatar URLs to project owners directly. DO NOT use generic gray circles or text placeholders for avatars.",
+    "Strictly adhere to the 'Swiss & High-Contrast' archetype: No soft gradients, prioritize absolute clarity, solid color blocking, and sharp typography."
+  ]
+}

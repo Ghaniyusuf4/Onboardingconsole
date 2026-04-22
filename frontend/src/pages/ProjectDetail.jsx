@@ -12,6 +12,7 @@ import Attribution from "@/components/Attribution";
 import ApkUpload from "@/components/ApkUpload";
 import Overview from "@/components/Overview";
 import CommentsTab from "@/components/CommentsTab";
+import SECopilot from "@/components/SECopilot";
 import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
 
 export default function ProjectDetail() {
@@ -107,6 +108,10 @@ export default function ProjectDetail() {
           <TabsTrigger data-testid="tab-overview" value="overview" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Overview</TabsTrigger>
           <TabsTrigger data-testid="tab-tracker" value="tracker" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Tracker</TabsTrigger>
           <TabsTrigger data-testid="tab-testing" value="testing" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Live Testing</TabsTrigger>
+          <TabsTrigger data-testid="tab-copilot" value="copilot" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none gap-1.5">
+            SE Co-Pilot
+            <span className="badge badge-orange py-0 px-1.5 text-[9px]">AI</span>
+          </TabsTrigger>
           <TabsTrigger data-testid="tab-attribution" value="attribution" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Attribution</TabsTrigger>
           <TabsTrigger data-testid="tab-apk" value="apk" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">APK Uploads</TabsTrigger>
           <TabsTrigger data-testid="tab-comments" value="comments" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none gap-2">
@@ -117,6 +122,7 @@ export default function ProjectDetail() {
         <TabsContent value="overview" className="mt-5"><Overview project={project} /></TabsContent>
         <TabsContent value="tracker" className="mt-5"><Tracker project={project} reload={reload} /></TabsContent>
         <TabsContent value="testing" className="mt-5"><TestingConsole project={project} /></TabsContent>
+        <TabsContent value="copilot" className="mt-5"><SECopilot project={project} /></TabsContent>
         <TabsContent value="attribution" className="mt-5"><Attribution project={project} /></TabsContent>
         <TabsContent value="apk" className="mt-5"><ApkUpload project={project} /></TabsContent>
         <TabsContent value="comments" className="mt-5"><CommentsTab project={project} /></TabsContent>

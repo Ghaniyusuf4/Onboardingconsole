@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Share, Copy, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, Share, Copy, Trash, House, Kanban, Lightning, Robot, Target, Package, Database, ChatCircleDots, ListChecks, Clock, ArrowUpRight } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import Tracker from "@/components/Tracker";
 import TestingConsole from "@/components/TestingConsole";
@@ -15,6 +15,18 @@ import CommentsTab from "@/components/CommentsTab";
 import SECopilot from "@/components/SECopilot";
 import HistoricalImport from "@/components/HistoricalImport";
 import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
+import SingularLogo from "@/components/SingularLogo";
+
+const TAB_META = {
+  overview:    { label: "Overview",         Icon: House,         color: "#3088F4" },
+  tracker:     { label: "Tracker",          Icon: Kanban,        color: "#0F3384" },
+  testing:     { label: "Live Testing",     Icon: Lightning,     color: "#03C1FF" },
+  copilot:     { label: "SE Co-Pilot",      Icon: Robot,         color: "#7C3AED", badge: "AI" },
+  attribution: { label: "Attribution",      Icon: Target,        color: "#1FA168" },
+  apk:         { label: "APK Uploads",      Icon: Package,       color: "#C77A00" },
+  import:      { label: "Historical Import",Icon: Database,      color: "#0077A8" },
+  comments:    { label: "Comments",         Icon: ChatCircleDots,color: "#FFB400" },
+};
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -57,78 +69,122 @@ export default function ProjectDetail() {
 
   const total = project.phases.reduce((s, p) => s + p.tasks.length, 0);
   const closed = project.phases.reduce((s, p) => s + p.tasks.filter(t => t.status === "closed").length, 0);
+  const blocked = project.phases.reduce((s, p) => s + p.tasks.filter(t => t.status === "blocked").length, 0);
+  const inProgress = project.phases.reduce((s, p) => s + p.tasks.filter(t => t.status === "in_progress").length, 0);
   const pct = total ? Math.round((closed / total) * 100) : 0;
 
   return (
     <div className="py-6 space-y-6" data-testid="project-detail-page">
-      <header className="panel p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-3">
-          <Link to="/dashboard" className="inline-flex items-center gap-1 text-xs text-[var(--sg-fg-3)] hover:text-[var(--sg-orange)] font-semibold uppercase tracking-wider" data-testid="back-to-dashboard">
-            <ArrowLeft weight="bold" className="w-3.5 h-3.5" /> Projects
-          </Link>
-          <button onClick={() => setShareOpen(true)} className="button button-soft h-9" data-testid="share-button">
-            <Share weight="bold" className="w-4 h-4" />
-            {shareToken ? "Manage Share Link" : "Share with Customer"}
-          </button>
+      <header className="project-hero panel p-6 lg:p-8 relative overflow-hidden">
+        {/* Decorative animated watermark */}
+        <div className="hero-watermark" aria-hidden="true">
+          <SingularLogo height={420} color="#3088F4" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-end">
-          <div className="lg:col-span-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="badge badge-orange uppercase">{project.platform}</span>
-              <span className="badge badge-neutral">{project.customer || "No customer"}</span>
-            </div>
-            <h1 className="font-display font-black text-3xl lg:text-4xl tracking-tight text-[var(--sg-fg)]">{project.name}</h1>
-            <p className="text-sm text-[var(--sg-fg-2)] mt-2">Onboarding · SDK validation · Attribution verification</p>
+        <div className="hero-orbit" aria-hidden="true">
+          <span className="orbit-dot orbit-dot-1" />
+          <span className="orbit-dot orbit-dot-2" />
+          <span className="orbit-dot orbit-dot-3" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <Link to="/dashboard" className="inline-flex items-center gap-1 text-xs text-[var(--sg-fg-3)] hover:text-[var(--sg-blue)] font-semibold uppercase tracking-wider" data-testid="back-to-dashboard">
+              <ArrowLeft weight="bold" className="w-3.5 h-3.5" /> Projects
+            </Link>
+            <button onClick={() => setShareOpen(true)} className="button button-soft h-9" data-testid="share-button">
+              <Share weight="bold" className="w-4 h-4" />
+              {shareToken ? "Manage Share Link" : "Share with Customer"}
+            </button>
           </div>
-          <div className="lg:col-span-2 space-y-3">
-            {health && (
-              <div className="panel-soft p-5">
-                <div className="flex items-center justify-between">
-                  <HealthGauge score={health.score} grade={health.grade} size={100} label="Onboarding Health" />
-                  <span className="badge badge-orange">Health Score</span>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+            <div className="lg:col-span-3 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="badge badge-orange uppercase">{project.platform}</span>
+                  <span className="badge badge-neutral">{project.customer || "No customer"}</span>
                 </div>
-                <HealthBreakdown breakdown={health.breakdown || []} blocked={health.blocked} />
+                <h1 className="font-display font-black text-3xl lg:text-5xl tracking-tight text-[var(--sg-fg)] leading-[1.05]">{project.name}</h1>
+                <p className="text-sm text-[var(--sg-fg-2)] mt-2">Onboarding · SDK validation · Attribution verification</p>
               </div>
-            )}
-            <div className="status-progress">
-              <div className="status-progress-head">
-                <div>
-                  <strong className="font-display text-[var(--sg-fg)]">Overall completion</strong>
-                  <p className="text-xs text-[var(--sg-fg-3)] mt-0.5">{closed}/{total} tasks closed</p>
+
+              {/* Quick stats strip */}
+              <div className="hero-stats mt-6 grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                <div className="hero-stat">
+                  <ListChecks weight="bold" className="w-3.5 h-3.5" style={{ color: "#1FA168" }} />
+                  <span className="hs-num">{closed}<span className="hs-sub">/{total}</span></span>
+                  <span className="hs-label">Closed</span>
                 </div>
-                <span className="progress-pill">{pct}%</span>
+                <div className="hero-stat">
+                  <Clock weight="bold" className="w-3.5 h-3.5" style={{ color: "#03C1FF" }} />
+                  <span className="hs-num">{inProgress}</span>
+                  <span className="hs-label">In progress</span>
+                </div>
+                <div className="hero-stat">
+                  <Lightning weight="bold" className="w-3.5 h-3.5" style={{ color: "#FFB400" }} />
+                  <span className="hs-num">{project.phases.length}</span>
+                  <span className="hs-label">Phases</span>
+                </div>
+                <div className="hero-stat">
+                  <ArrowUpRight weight="bold" className="w-3.5 h-3.5" style={{ color: blocked ? "var(--sg-error)" : "var(--sg-fg-3)" }} />
+                  <span className="hs-num">{blocked}</span>
+                  <span className="hs-label">Blocked</span>
+                </div>
               </div>
-              <div className="progress-track"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
+            </div>
+
+            <div className="lg:col-span-2 space-y-3">
+              {health && (
+                <div className="panel-soft p-5">
+                  <div className="flex items-center justify-between">
+                    <HealthGauge score={health.score} grade={health.grade} size={100} label="Onboarding Health" />
+                    <span className="badge badge-orange">Health Score</span>
+                  </div>
+                  <HealthBreakdown breakdown={health.breakdown || []} blocked={health.blocked} />
+                </div>
+              )}
+              <div className="status-progress">
+                <div className="status-progress-head">
+                  <div>
+                    <strong className="font-display text-[var(--sg-fg)]">Overall completion</strong>
+                    <p className="text-xs text-[var(--sg-fg-3)] mt-0.5">{closed}/{total} tasks closed</p>
+                  </div>
+                  <span className="progress-pill">{pct}%</span>
+                </div>
+                <div className="progress-track"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="bg-white border border-[var(--sg-border)] p-1 rounded-md h-auto">
-          <TabsTrigger data-testid="tab-overview" value="overview" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Overview</TabsTrigger>
-          <TabsTrigger data-testid="tab-tracker" value="tracker" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Tracker</TabsTrigger>
-          <TabsTrigger data-testid="tab-testing" value="testing" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Live Testing</TabsTrigger>
-          <TabsTrigger data-testid="tab-copilot" value="copilot" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none gap-1.5">
-            SE Co-Pilot
-            <span className="badge badge-orange py-0 px-1.5 text-[9px]">AI</span>
-          </TabsTrigger>
-          <TabsTrigger data-testid="tab-attribution" value="attribution" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Attribution</TabsTrigger>
-          <TabsTrigger data-testid="tab-apk" value="apk" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">APK Uploads</TabsTrigger>
-          <TabsTrigger data-testid="tab-import" value="import" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Historical Import</TabsTrigger>
-          <TabsTrigger data-testid="tab-comments" value="comments" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none gap-2">
-            Comments
-            {unread > 0 && <span className="bg-[var(--sg-orange)] text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full" data-testid="comments-unread-badge">{unread}</span>}
-          </TabsTrigger>
+      <Tabs defaultValue="overview" className="w-full project-tabs">
+        <TabsList className="proj-tablist">
+          {Object.entries(TAB_META).map(([value, m]) => (
+            <TabsTrigger
+              key={value}
+              data-testid={`tab-${value}`}
+              value={value}
+              className="proj-tab"
+              style={{ "--tab-color": m.color }}
+            >
+              <m.Icon weight="fill" className="proj-tab-icon" />
+              <span>{m.label}</span>
+              {m.badge && <span className="proj-tab-badge">{m.badge}</span>}
+              {value === "comments" && unread > 0 && (
+                <span className="proj-tab-badge" style={{ background: "var(--sg-error)", color: "white" }} data-testid="comments-unread-badge">{unread}</span>
+              )}
+            </TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value="overview" className="mt-5"><Overview project={project} /></TabsContent>
-        <TabsContent value="tracker" className="mt-5"><Tracker project={project} reload={reload} /></TabsContent>
-        <TabsContent value="testing" className="mt-5"><TestingConsole project={project} /></TabsContent>
-        <TabsContent value="copilot" className="mt-5"><SECopilot project={project} /></TabsContent>
-        <TabsContent value="attribution" className="mt-5"><Attribution project={project} /></TabsContent>
-        <TabsContent value="apk" className="mt-5"><ApkUpload project={project} /></TabsContent>
-        <TabsContent value="import" className="mt-5"><HistoricalImport project={project} /></TabsContent>
-        <TabsContent value="comments" className="mt-5"><CommentsTab project={project} /></TabsContent>
+        <TabsContent value="overview" className="proj-tab-content"><Overview project={project} /></TabsContent>
+        <TabsContent value="tracker" className="proj-tab-content"><Tracker project={project} reload={reload} /></TabsContent>
+        <TabsContent value="testing" className="proj-tab-content"><TestingConsole project={project} /></TabsContent>
+        <TabsContent value="copilot" className="proj-tab-content"><SECopilot project={project} /></TabsContent>
+        <TabsContent value="attribution" className="proj-tab-content"><Attribution project={project} /></TabsContent>
+        <TabsContent value="apk" className="proj-tab-content"><ApkUpload project={project} /></TabsContent>
+        <TabsContent value="import" className="proj-tab-content"><HistoricalImport project={project} /></TabsContent>
+        <TabsContent value="comments" className="proj-tab-content"><CommentsTab project={project} /></TabsContent>
       </Tabs>
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>

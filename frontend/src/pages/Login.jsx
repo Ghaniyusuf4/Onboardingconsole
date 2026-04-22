@@ -16,7 +16,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--sg-bg)]" data-testid="login-page">
+    <div className="min-h-screen" data-testid="login-page">
       <nav className="panel topnav max-w-[1400px] mx-auto mt-4 mx-4 lg:mx-auto">
         <div className="brand-lockup">
           <SingularLogo height={30} />

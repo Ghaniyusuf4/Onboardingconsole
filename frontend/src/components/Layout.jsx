@@ -16,7 +16,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--sg-bg)]" data-testid="layout">
+    <div className="min-h-screen" data-testid="layout">
       <nav className="panel topnav max-w-[1500px] mx-auto mt-4 mx-3 lg:mx-auto" data-testid="topnav">
         <NavLink to="/dashboard" className="brand-lockup">
           <SingularLogo height={30} />

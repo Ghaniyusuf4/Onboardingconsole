@@ -6,6 +6,7 @@ import { fetchMe, exchangeSession } from "@/lib/api";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import ProjectDetail from "@/pages/ProjectDetail";
+import PublicShare from "@/pages/PublicShare";
 import Layout from "@/components/Layout";
 
 const AuthCtx = createContext(null);
@@ -69,6 +70,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/share/:token" element={<PublicShare />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route element={<Protected><Layout /></Protected>}>
         <Route path="/dashboard" element={<Dashboard />} />

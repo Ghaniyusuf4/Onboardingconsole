@@ -392,6 +392,53 @@ async def update_keys(project_id: str, request: Request):
     await db.projects.update_one({"id": project_id, "user_id": user.user_id}, {"$set": update})
     return {"ok": True}
 
+# ============ Share Link (read-only customer view) ============
+@api_router.post("/projects/{project_id}/share")
+async def create_share(project_id: str, request: Request):
+    user = await get_current_user(request)
+    proj = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0})
+    if not proj:
+        raise HTTPException(404, "Project not found")
+    token = proj.get("share_token") or f"sh_{uuid.uuid4().hex[:24]}"
+    await db.projects.update_one({"id": project_id}, {"$set": {"share_token": token}})
+    return {"share_token": token}
+
+@api_router.delete("/projects/{project_id}/share")
+async def revoke_share(project_id: str, request: Request):
+    user = await get_current_user(request)
+    await db.projects.update_one(
+        {"id": project_id, "user_id": user.user_id},
+        {"$unset": {"share_token": ""}}
+    )
+    return {"ok": True}
+
+@api_router.get("/public/share/{token}")
+async def public_share_view(token: str):
+    proj = await db.projects.find_one({"share_token": token}, {"_id": 0})
+    if not proj:
+        raise HTTPException(404, "Share link not found or revoked")
+    runs = await db.test_runs.find({"project_id": proj["id"]}, {"_id": 0}).to_list(2000)
+    health = compute_health(proj, runs, detailed=True)
+    # Strip sensitive fields (sdk_key, api_key, user_id)
+    safe_phases = []
+    for p in proj.get("phases", []):
+        safe_tasks = []
+        for t in p.get("tasks", []):
+            safe_tasks.append({
+                "id": t["id"], "title": t["title"], "owner": t.get("owner"),
+                "status": t.get("status"), "priority": t.get("priority"),
+                "checklist": [{"id": c["id"], "label": c["label"], "done": c.get("done", False)} for c in t.get("checklist", [])],
+            })
+        safe_phases.append({
+            "id": p["id"], "name": p["name"], "description": p.get("description"),
+            "order": p.get("order", 0), "tasks": safe_tasks
+        })
+    return {
+        "name": proj["name"], "customer": proj.get("customer"),
+        "platform": proj.get("platform"), "created_at": proj.get("created_at"),
+        "phases": safe_phases, "health": health,
+    }
+
 @api_router.patch("/projects/{project_id}/tasks/{task_id}")
 async def update_task(project_id: str, task_id: str, payload: TaskUpdate, request: Request):
     user = await get_current_user(request)

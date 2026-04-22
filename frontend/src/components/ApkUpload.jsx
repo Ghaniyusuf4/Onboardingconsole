@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CloudArrowUp, FileArchive, CheckCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
@@ -16,6 +14,7 @@ export default function ApkUpload({ project }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [drag, setDrag] = useState(false);
+  const [currentFile, setCurrentFile] = useState(null);
   const inputRef = useRef(null);
 
   const load = async () => {
@@ -29,7 +28,7 @@ export default function ApkUpload({ project }) {
     if (!file.name.toLowerCase().endsWith(".apk") && !file.name.toLowerCase().endsWith(".aab")) {
       return toast.error("Only .apk or .aab files allowed");
     }
-    setUploading(true); setProgress(0);
+    setUploading(true); setProgress(0); setCurrentFile(file);
     const fd = new FormData();
     fd.append("file", file);
     try {
@@ -41,7 +40,7 @@ export default function ApkUpload({ project }) {
       load();
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Upload failed");
-    } finally { setUploading(false); setProgress(0); }
+    } finally { setUploading(false); setProgress(0); setCurrentFile(null); }
   };
 
   const onDrop = (e) => {
@@ -51,65 +50,88 @@ export default function ApkUpload({ project }) {
   };
 
   return (
-    <div className="space-y-6" data-testid="apk-upload-tab">
-      <div className="bg-white border border-zinc-200 rounded-xl p-6">
-        <p className="eyebrow">Workflow</p>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-0 mt-3 border border-zinc-200 rounded-lg divide-y md:divide-y-0 md:divide-x divide-zinc-200">
-          {["Upload","Validate","Push to Test","Run SDK","Results"].map((s,i)=>(
-            <div key={s} className="p-4 flex items-center gap-3">
-              <div className={`w-7 h-7 rounded-full grid place-items-center text-xs font-bold ${i===0 ? "bg-[#0055FF] text-white":"bg-zinc-100 text-zinc-500"}`}>{i+1}</div>
-              <div className="text-sm font-medium text-zinc-900">{s}</div>
-            </div>
-          ))}
+    <div className="space-y-5" data-testid="apk-upload-tab">
+      {/* 5-step grid */}
+      <section className="panel p-6">
+        <div className="section-head">
+          <div>
+            <h2>APK Validation Workflow</h2>
+            <p className="muted">Upload · Validate · Run SDK Test · Verify Attribution · Sign Off</p>
+          </div>
+          <span className="badge badge-neutral">Live tracking</span>
         </div>
-      </div>
+        <div className="step-grid">
+          <div className={`step-card ${uploading ? "is-active" : files.length > 0 ? "is-done" : "is-active"}`} data-testid="step-upload"><span>1</span><strong>Upload</strong></div>
+          <div className={`step-card ${files.length > 0 ? "is-done" : ""}`}><span>2</span><strong>Validate</strong></div>
+          <div className="step-card"><span>3</span><strong>Run SDK</strong></div>
+          <div className="step-card"><span>4</span><strong>Attribute</strong></div>
+          <div className="step-card"><span>5</span><strong>Sign Off</strong></div>
+        </div>
+      </section>
 
+      {/* Dropzone */}
       <div
         onDragOver={(e)=>{e.preventDefault(); setDrag(true);}}
         onDragLeave={()=>setDrag(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
         data-testid="apk-dropzone"
-        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${drag ? "border-[#0055FF] bg-[#0055FF]/5" : "border-zinc-300 bg-zinc-50/50 hover:border-[#0055FF] hover:bg-[#0055FF]/5"}`}
+        className={`dropzone ${drag ? "is-drag" : ""}`}
       >
         <input ref={inputRef} type="file" accept=".apk,.aab" className="hidden" onChange={(e) => upload(e.target.files?.[0])} data-testid="apk-file-input" />
-        <div className="w-14 h-14 rounded-md bg-zinc-100 grid place-items-center mx-auto text-zinc-500">
-          <CloudArrowUp weight="bold" className="w-7 h-7" />
+        <div className="dropzone-icon">APK</div>
+        <h3>Drop your APK or AAB here, or browse from your computer</h3>
+        <p>Supports .apk and .aab files up to 200MB. Stored securely in object storage. Required: a build with the Singular SDK integrated.</p>
+        <div className="flex gap-2 justify-center mt-5">
+          <button className="button button-primary" type="button" onClick={(e)=>{e.stopPropagation(); inputRef.current?.click();}} data-testid="apk-choose-button">Choose File</button>
+          <button className="button button-soft" type="button" onClick={(e)=>{e.stopPropagation();}}>Reset Session</button>
         </div>
-        <h3 className="font-display font-bold text-zinc-900 mt-4">Drop your APK here or browse</h3>
-        <p className="text-sm text-zinc-500 mt-1">Supports .apk and .aab files up to 200MB. Stored securely in object storage.</p>
-        <Badge variant="secondary" className="mt-4 font-mono">apk · aab</Badge>
       </div>
 
+      {/* Upload progress + metric grid */}
       {uploading && (
-        <div className="bg-white border border-zinc-200 rounded-xl p-5">
-          <div className="flex justify-between text-xs text-zinc-500 mb-2">
-            <span>Uploading…</span><span className="font-mono font-semibold text-zinc-900">{progress}%</span>
+        <section className="status-progress">
+          <div className="status-progress-head">
+            <div>
+              <strong className="font-display text-[var(--sg-fg)]">Uploading {currentFile?.name}</strong>
+              <p className="text-xs text-[var(--sg-fg-3)] mt-0.5">Direct-to-storage stream — no edge timeouts.</p>
+            </div>
+            <span className="progress-pill">{progress}%</span>
           </div>
-          <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
-            <div className="h-full bg-[#0055FF] rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
+          <div className="progress-track"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
+        </section>
       )}
 
-      <div>
-        <p className="eyebrow mb-3">Uploaded APKs</p>
+      <section className="metric-grid">
+        <div className="metric-card"><span>APKs Uploaded</span><strong>{files.length}</strong></div>
+        <div className="metric-card"><span>Latest Size</span><strong>{files[0] ? fmtBytes(files[0].size) : "—"}</strong></div>
+        <div className="metric-card"><span>Last Upload</span><strong>{files[0] ? new Date(files[0].uploaded_at).toLocaleDateString() : "—"}</strong></div>
+      </section>
+
+      {/* List */}
+      <section className="panel p-6">
+        <div className="section-head">
+          <div>
+            <h2>Uploaded APKs</h2>
+            <p className="muted">Stored securely in object storage with metadata.</p>
+          </div>
+        </div>
         <div className="space-y-2">
-          {files.length === 0 && <div className="text-sm text-zinc-500 bg-white border border-zinc-200 rounded-xl p-6 text-center">No APKs uploaded yet.</div>}
+          {files.length === 0 && <div className="text-sm text-[var(--sg-fg-3)] panel-soft p-8 text-center">No APKs uploaded yet.</div>}
           {files.map(f => (
-            <div key={f.id} data-testid={`apk-row-${f.id}`} className="bg-white border border-zinc-200 rounded-xl p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-md bg-emerald-50 grid place-items-center text-emerald-600">
+            <div key={f.id} data-testid={`apk-row-${f.id}`} className="panel-soft p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-md bg-[var(--sg-orange-soft)] grid place-items-center text-[var(--sg-orange)] flex-shrink-0">
                 <FileArchive weight="bold" className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-zinc-900 truncate">{f.filename}</div>
-                <div className="text-xs text-zinc-500 font-mono">{fmtBytes(f.size)} · {new Date(f.uploaded_at).toLocaleString()}</div>
+                <div className="font-medium text-[var(--sg-fg)] truncate">{f.filename}</div>
+                <div className="text-xs text-[var(--sg-fg-3)] font-mono">{fmtBytes(f.size)} · {new Date(f.uploaded_at).toLocaleString()}</div>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 gap-1"><CheckCircle weight="bold" className="w-3 h-3" />Stored</Badge>
+              <span className="badge badge-success"><CheckCircle weight="bold" className="w-3 h-3" />Stored</span>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

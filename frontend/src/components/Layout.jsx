@@ -1,9 +1,8 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { logout } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { House, FolderSimple, SignOut } from "@phosphor-icons/react";
+import { SignOut, BookOpen } from "@phosphor-icons/react";
 
 export default function Layout() {
   const { user, setUser } = useAuth();
@@ -16,41 +15,42 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#FAFAFA]">
-      <aside className="w-64 bg-white border-r border-zinc-200 flex flex-col" data-testid="sidebar">
-        <div className="p-5 border-b border-zinc-200 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-[#0055FF] grid place-items-center text-white font-display font-black">S</div>
-          <div>
-            <div className="font-display font-bold text-zinc-900 leading-tight">Singular</div>
-            <div className="text-[11px] text-zinc-500">Onboarding · Testing</div>
-          </div>
-        </div>
-        <nav className="p-3 flex-1">
-          <p className="eyebrow px-3 pb-2 pt-1">Workspace</p>
-          <NavLink to="/dashboard" data-testid="nav-dashboard" className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${isActive ? "bg-zinc-100 text-zinc-950" : "text-zinc-600 hover:bg-zinc-50"}`}>
-            <House weight="bold" className="w-4 h-4" /> Projects
+    <div className="min-h-screen bg-[var(--sg-bg)]" data-testid="layout">
+      <nav className="panel topnav max-w-[1500px] mx-auto mt-4 mx-3 lg:mx-auto" data-testid="topnav">
+        <NavLink to="/dashboard" className="brand-lockup">
+          <span className="brand-mark">S</span>
+          <span>Singular</span>
+          <span className="brand-service-inline">Onboarding & Testing Console</span>
+        </NavLink>
+        <div className="flex items-center gap-1">
+          <NavLink to="/dashboard" data-testid="nav-dashboard" className={({isActive}) => `topnav-link ${isActive ? "active" : ""}`}>
+            Projects
           </NavLink>
-        </nav>
-        <div className="p-3 border-t border-zinc-200">
-          <div className="flex items-center gap-3 p-2">
+          <a href="https://support.singular.net/hc/en-us/categories/360002441132" target="_blank" rel="noreferrer" className="topnav-link inline-flex items-center gap-1.5">
+            <BookOpen weight="bold" className="w-3.5 h-3.5" /> SDK Docs
+          </a>
+          <div className="ml-3 pl-3 border-l border-[var(--sg-border)] flex items-center gap-2">
             <Avatar className="w-8 h-8">
               <AvatarImage src={user?.picture} />
-              <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
+              <AvatarFallback className="text-xs">{user?.name?.[0] || "U"}</AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-zinc-900 truncate" data-testid="sidebar-user-name">{user?.name}</div>
-              <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
+            <div className="hidden md:block">
+              <div className="text-xs font-semibold text-[var(--sg-fg)] leading-tight" data-testid="topnav-user-name">{user?.name}</div>
+              <div className="text-[11px] text-[var(--sg-fg-3)]">{user?.email}</div>
             </div>
-            <Button data-testid="logout-button" variant="ghost" size="icon" onClick={handleLogout} className="text-zinc-500 hover:text-zinc-900">
-              <SignOut weight="bold" className="w-4 h-4" />
-            </Button>
+            <button data-testid="logout-button" onClick={handleLogout} className="topnav-link inline-flex items-center gap-1.5">
+              <SignOut weight="bold" className="w-3.5 h-3.5" /> Sign out
+            </button>
           </div>
         </div>
-      </aside>
-      <main className="flex-1 min-w-0 overflow-x-hidden">
+      </nav>
+      <main className="max-w-[1500px] mx-auto px-3 lg:px-0">
         <Outlet />
       </main>
+      <footer className="max-w-[1500px] mx-auto px-3 lg:px-0 py-6 text-xs text-[var(--sg-fg-3)] flex justify-between">
+        <span>© 2026 · Singular Onboarding Console</span>
+        <span>Powered by Singular Testing Console + Attribution Details APIs</span>
+      </footer>
     </div>
   );
 }

@@ -21,7 +21,7 @@ export default function GuidancePanel({ title, summary, steps = [], defaultOpen 
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-display font-semibold text-[var(--sg-fg)]">{title}</h3>
-          <p className="text-sm text-[var(--sg-fg-3)] truncate">{summary}</p>
+          <p className="text-sm text-[var(--sg-fg-3)] line-clamp-2">{summary}</p>
         </div>
         <CaretDown weight="bold" className={`w-4 h-4 text-[var(--sg-fg-3)] transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

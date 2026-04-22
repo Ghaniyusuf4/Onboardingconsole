@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, FolderSimple, ArrowRight, Trash, CloudArrowUp, ChartLine, Lightning } from "@phosphor-icons/react";
+import { Plus, FolderSimple, ArrowRight, Trash, CloudArrowUp, ChartLine, Lightning, Heartbeat } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import HealthGauge from "@/components/HealthGauge";
 
 export default function Dashboard() {
   const [projects, setProjects] = useState([]);
@@ -42,9 +43,13 @@ export default function Dashboard() {
   const totals = projects.reduce((acc, p) => {
     acc.total += p.tasks_total;
     acc.closed += p.tasks_closed;
+    acc.scoreSum += p.health_score || 0;
+    acc.blocked += p.blocked || 0;
     return acc;
-  }, { total: 0, closed: 0 });
+  }, { total: 0, closed: 0, scoreSum: 0, blocked: 0 });
   const overallPct = totals.total ? Math.round((totals.closed / totals.total) * 100) : 0;
+  const avgHealth = projects.length ? Math.round(totals.scoreSum / projects.length) : 0;
+  const avgGrade = avgHealth >= 85 ? "A" : avgHealth >= 70 ? "B" : avgHealth >= 50 ? "C" : avgHealth >= 25 ? "D" : "F";
 
   return (
     <div className="py-6 space-y-6" data-testid="dashboard-page">
@@ -110,20 +115,20 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="lg:col-span-2">
+            <div className="panel-soft p-5 mb-3 flex items-center justify-between">
+              <HealthGauge score={avgHealth} grade={avgGrade} size={100} label="Workspace Health" />
+              <div className="text-right">
+                <span className="badge badge-orange">Aggregate</span>
+                <p className="text-xs text-[var(--sg-fg-3)] mt-2 max-w-[180px]">
+                  Mean health across {projects.length} project{projects.length !== 1 ? "s" : ""}.
+                  {totals.blocked > 0 && <span className="block text-[var(--sg-error)] mt-1">{totals.blocked} blocked task(s)</span>}
+                </p>
+              </div>
+            </div>
             <div className="metric-grid">
               <div className="metric-card"><span>Projects</span><strong>{projects.length}</strong></div>
               <div className="metric-card"><span>Tasks Closed</span><strong>{totals.closed}/{totals.total}</strong></div>
               <div className="metric-card"><span>Overall</span><strong>{overallPct}%</strong></div>
-            </div>
-            <div className="status-progress mt-3">
-              <div className="status-progress-head">
-                <div>
-                  <strong className="font-display text-[var(--sg-fg)]">Workspace Progress</strong>
-                  <p className="text-xs text-[var(--sg-fg-3)] mt-0.5">Aggregate completion across all projects.</p>
-                </div>
-                <span className="progress-pill">{overallPct}%</span>
-              </div>
-              <div className="progress-track"><div className="progress-fill" style={{ width: `${overallPct}%` }} /></div>
             </div>
           </div>
         </div>
@@ -191,9 +196,17 @@ export default function Dashboard() {
                   </div>
                   <div className="progress-track"><div className="progress-fill" style={{ width: `${p.progress}%` }} /></div>
                 </div>
-                <Link to={`/projects/${p.id}`} data-testid={`open-project-${p.id}`} className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-[var(--sg-orange)] hover:gap-2 transition-all">
-                  Open project <ArrowRight weight="bold" className="w-4 h-4" />
-                </Link>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--sg-border)]">
+                  <div className="flex items-center gap-1.5">
+                    <Heartbeat weight="fill" className="w-3.5 h-3.5 text-[var(--sg-orange)]" />
+                    <span className="text-xs text-[var(--sg-fg-3)]">Health</span>
+                    <span className="font-mono font-bold text-[var(--sg-fg)] text-sm">{p.health_score}</span>
+                    <span className="badge badge-neutral ml-1" data-testid={`grade-${p.id}`}>{p.health_grade}</span>
+                  </div>
+                  <Link to={`/projects/${p.id}`} data-testid={`open-project-${p.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--sg-orange)] hover:gap-2 transition-all">
+                    Open <ArrowRight weight="bold" className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

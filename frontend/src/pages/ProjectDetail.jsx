@@ -8,14 +8,20 @@ import TestingConsole from "@/components/TestingConsole";
 import Attribution from "@/components/Attribution";
 import ApkUpload from "@/components/ApkUpload";
 import Overview from "@/components/Overview";
+import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
 
 export default function ProjectDetail() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
+  const [health, setHealth] = useState(null);
 
   const reload = async () => {
-    const r = await api.get(`/projects/${id}`);
-    setProject(r.data);
+    const [pr, hr] = await Promise.all([
+      api.get(`/projects/${id}`),
+      api.get(`/projects/${id}/health`),
+    ]);
+    setProject(pr.data);
+    setHealth(hr.data);
   };
   useEffect(() => { reload(); }, [id]);
 
@@ -40,7 +46,16 @@ export default function ProjectDetail() {
             <h1 className="font-display font-black text-3xl lg:text-4xl tracking-tight text-[var(--sg-fg)]">{project.name}</h1>
             <p className="text-sm text-[var(--sg-fg-2)] mt-2">Onboarding · SDK validation · Attribution verification</p>
           </div>
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-3">
+            {health && (
+              <div className="panel-soft p-5">
+                <div className="flex items-center justify-between">
+                  <HealthGauge score={health.score} grade={health.grade} size={100} label="Onboarding Health" />
+                  <span className="badge badge-orange">Health Score</span>
+                </div>
+                <HealthBreakdown breakdown={health.breakdown || []} blocked={health.blocked} />
+              </div>
+            )}
             <div className="status-progress">
               <div className="status-progress-head">
                 <div>

@@ -207,6 +207,51 @@ def build_default_phases() -> List[Phase]:
         phases.append(phase)
     return phases
 
+# ============ Health Score ============
+def compute_health(project: dict, runs: list, detailed: bool = False) -> dict:
+    pid = project["id"]
+    total = sum(len(p.get("tasks", [])) for p in project.get("phases", []))
+    closed = sum(1 for p in project.get("phases", []) for t in p.get("tasks", []) if t.get("status") == "closed")
+    blocked = sum(1 for p in project.get("phases", []) for t in p.get("tasks", []) if t.get("status") == "blocked")
+    progress = int((closed / total) * 100) if total else 0
+
+    test_runs = [r for r in runs if r.get("project_id") == pid and r.get("kind") == "test_console"]
+    attr_runs = [r for r in runs if r.get("project_id") == pid and r.get("kind") == "attribution"]
+    sdk_pass = int((sum(1 for r in test_runs if r.get("ok")) / len(test_runs)) * 100) if test_runs else None
+    attr_pass = int((sum(1 for r in attr_runs if r.get("ok")) / len(attr_runs)) * 100) if attr_runs else None
+
+    if sdk_pass is None and attr_pass is None:
+        score = progress
+    else:
+        s_sdk = sdk_pass if sdk_pass is not None else progress
+        s_attr = attr_pass if attr_pass is not None else progress
+        score = round(0.60 * progress + 0.25 * s_sdk + 0.15 * s_attr)
+    if blocked > 0:
+        score = max(0, score - min(20, blocked * 5))
+
+    grade = "A" if score >= 85 else "B" if score >= 70 else "C" if score >= 50 else "D" if score >= 25 else "F"
+
+    base = {
+        "score": score, "grade": grade, "progress": progress,
+        "tasks_total": total, "tasks_closed": closed, "blocked": blocked,
+        "sdk_pass_rate": sdk_pass, "attribution_pass_rate": attr_pass,
+        "sdk_runs": len(test_runs), "attribution_runs": len(attr_runs),
+    }
+    if detailed:
+        base["breakdown"] = [
+            {"label": "Phase progress", "weight": 60, "value": progress},
+            {"label": "SDK test pass rate", "weight": 25,
+             "value": sdk_pass if sdk_pass is not None else 0,
+             "note": "no runs yet" if sdk_pass is None else f"{len(test_runs)} run(s)"},
+            {"label": "Attribution pass rate", "weight": 15,
+             "value": attr_pass if attr_pass is not None else 0,
+             "note": "no runs yet" if attr_pass is None else f"{len(attr_runs)} run(s)"},
+            {"label": "Blocked task penalty", "weight": 0,
+             "value": -min(20, blocked * 5), "note": f"{blocked} blocked"},
+        ]
+    return base
+
+
 # ============ Auth helpers ============
 async def get_current_user(request: Request) -> User:
     token = request.cookies.get("session_token")
@@ -290,16 +335,17 @@ async def auth_logout(request: Request, response: Response):
 async def list_projects(request: Request):
     user = await get_current_user(request)
     docs = await db.projects.find({"user_id": user.user_id}, {"_id": 0}).to_list(500)
-    # return summary
+    # gather test run aggregates per project in one query
+    runs = await db.test_runs.find({"user_id": user.user_id}, {"_id": 0, "project_id": 1, "kind": 1, "ok": 1}).to_list(5000)
     out = []
     for d in docs:
-        total = sum(len(p.get("tasks", [])) for p in d.get("phases", []))
-        closed = sum(1 for p in d.get("phases", []) for t in p.get("tasks", []) if t.get("status") == "closed")
+        h = compute_health(d, runs)
         out.append({
             "id": d["id"], "name": d["name"], "customer": d.get("customer"),
             "platform": d.get("platform"), "created_at": d.get("created_at"),
-            "tasks_total": total, "tasks_closed": closed,
-            "progress": int((closed / total) * 100) if total else 0
+            "tasks_total": h["tasks_total"], "tasks_closed": h["tasks_closed"],
+            "progress": h["progress"], "health_score": h["score"],
+            "health_grade": h["grade"], "blocked": h["blocked"],
         })
     return out
 
@@ -320,6 +366,15 @@ async def get_project(project_id: str, request: Request):
     if not doc:
         raise HTTPException(404, "Project not found")
     return doc
+
+@api_router.get("/projects/{project_id}/health")
+async def project_health(project_id: str, request: Request):
+    user = await get_current_user(request)
+    doc = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Project not found")
+    runs = await db.test_runs.find({"user_id": user.user_id, "project_id": project_id}, {"_id": 0}).to_list(2000)
+    return compute_health(doc, runs, detailed=True)
 
 @api_router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, request: Request):

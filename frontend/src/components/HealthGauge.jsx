@@ -1,11 +1,11 @@
 import { Heart, Warning } from "@phosphor-icons/react";
 
 const GRADE_COLORS = {
-  A: { fg: "var(--sg-success)", bg: "var(--sg-success-bg)", ring: "#1FA168" },
-  B: { fg: "#1F6BFF", bg: "#E1ECFF", ring: "#1F6BFF" },
-  C: { fg: "var(--sg-warning)", bg: "var(--sg-warning-bg)", ring: "#C77A00" },
-  D: { fg: "var(--sg-orange)", bg: "var(--sg-orange-soft)", ring: "var(--sg-orange)" },
-  F: { fg: "var(--sg-error)", bg: "var(--sg-error-bg)", ring: "var(--sg-error)" },
+  A: { fg: "#B87D00", bg: "#FFF4DD", ring: "#FFB400", glow: "rgba(255, 180, 0, 0.35)" },
+  B: { fg: "#0077A8", bg: "#E0F7FF", ring: "#03C1FF", glow: "rgba(3, 193, 255, 0.35)" },
+  C: { fg: "var(--sg-navy)", bg: "var(--sg-blue-soft)", ring: "var(--sg-blue)", glow: "rgba(48, 136, 244, 0.35)" },
+  D: { fg: "var(--sg-warning)", bg: "var(--sg-warning-bg)", ring: "#C77A00", glow: "rgba(199, 122, 0, 0.3)" },
+  F: { fg: "var(--sg-error)", bg: "var(--sg-error-bg)", ring: "var(--sg-error)", glow: "rgba(214, 52, 43, 0.3)" },
 };
 
 export default function HealthGauge({ score = 0, grade = "F", size = 120, label = "Health" }) {
@@ -23,7 +23,7 @@ export default function HealthGauge({ score = 0, grade = "F", size = 120, label 
             stroke={c.ring} strokeWidth="8" fill="none"
             strokeDasharray={`${dash} ${circ}`}
             strokeLinecap="round"
-            style={{ transition: "stroke-dasharray 0.8s ease" }}
+            style={{ transition: "stroke-dasharray 0.8s ease", filter: `drop-shadow(0 0 6px ${c.glow})` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">

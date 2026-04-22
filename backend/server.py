@@ -791,7 +791,7 @@ async def slack_command(request: Request,
         lines = []
         for d in docs:
             h = compute_health(d, runs)
-            grade_emoji = {"A": ":green_heart:", "B": ":blue_heart:", "C": ":yellow_heart:", "D": ":orange_heart:", "F": ":red_circle:"}.get(h["grade"], ":white_circle:")
+            grade_emoji = {"A": ":star:", "B": ":large_blue_circle:", "C": ":blue_heart:", "D": ":orange_heart:", "F": ":red_circle:"}.get(h["grade"], ":white_circle:")
             lines.append(f"{grade_emoji} *{d['name']}* — {h['score']}/100 ({h['grade']}) · {h['tasks_closed']}/{h['tasks_total']} tasks · {d.get('customer','—')}")
         return JSONResponse(slack_response("*Your Onboarding Projects*\n" + "\n".join(lines)))
 

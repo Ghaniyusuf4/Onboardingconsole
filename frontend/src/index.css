@@ -276,7 +276,9 @@ body {
   .badge-warning { background: var(--sg-warning-bg); color: var(--sg-warning); border-color: #F2D199; }
   .badge-error { background: var(--sg-error-bg); color: var(--sg-error); border-color: #F1B7B3; }
   .badge-info { background: var(--sg-info-bg); color: var(--sg-info); border-color: #B7CEFA; }
-  .badge-orange { background: var(--sg-orange-soft); color: var(--sg-orange); border-color: #FFC9B8; }
+  .badge-orange { background: var(--sg-blue-soft); color: var(--sg-blue); border-color: #B7CEFA; }
+  .badge-gold { background: #FFF4DD; color: #B87D00; border-color: #F2D199; }
+  .badge-cyan { background: #E0F7FF; color: #0077A8; border-color: #9EDEF7; }
 
   /* Metric grid */
   .metric-grid {

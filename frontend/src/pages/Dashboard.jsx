@@ -198,12 +198,17 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--sg-border)]">
                   <div className="flex items-center gap-1.5">
-                    <Heartbeat weight="fill" className="w-3.5 h-3.5 text-[var(--sg-orange)]" />
+                    <Heartbeat weight="fill" className={`w-3.5 h-3.5 ${p.health_grade === "A" ? "text-[#FFB400]" : p.health_grade === "B" ? "text-[#03C1FF]" : "text-[var(--sg-blue)]"}`} />
                     <span className="text-xs text-[var(--sg-fg-3)]">Health</span>
                     <span className="font-mono font-bold text-[var(--sg-fg)] text-sm">{p.health_score}</span>
-                    <span className="badge badge-neutral ml-1" data-testid={`grade-${p.id}`}>{p.health_grade}</span>
+                    <span
+                      className={`badge ml-1 ${p.health_grade === "A" ? "badge-gold" : p.health_grade === "B" ? "badge-cyan" : p.health_grade === "C" ? "badge-orange" : p.health_grade === "D" ? "badge-warning" : "badge-error"}`}
+                      data-testid={`grade-${p.id}`}
+                    >
+                      {p.health_grade}
+                    </span>
                   </div>
-                  <Link to={`/projects/${p.id}`} data-testid={`open-project-${p.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--sg-orange)] hover:gap-2 transition-all">
+                  <Link to={`/projects/${p.id}`} data-testid={`open-project-${p.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--sg-blue)] hover:gap-2 transition-all">
                     Open <ArrowRight weight="bold" className="w-4 h-4" />
                   </Link>
                 </div>

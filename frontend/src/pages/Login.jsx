@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { GoogleLogo, ArrowRight, Lightning, ChartBar, ShieldCheck, Cube } from "@phosphor-icons/react";
+import SingularLogo from "@/components/SingularLogo";
 
 export default function Login() {
   const { user, loading } = useAuth();
@@ -18,7 +19,7 @@ export default function Login() {
     <div className="min-h-screen bg-[var(--sg-bg)]" data-testid="login-page">
       <nav className="panel topnav max-w-[1400px] mx-auto mt-4 mx-4 lg:mx-auto">
         <div className="brand-lockup">
-          <span className="brand-mark">S</span>
+          <SingularLogo height={30} />
           <span>Singular</span>
           <span className="brand-service-inline">Onboarding & Testing Console</span>
         </div>

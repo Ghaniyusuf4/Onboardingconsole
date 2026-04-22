@@ -6,24 +6,31 @@
 
 /* ================== Singular Tokens ================== */
 :root {
-  /* Brand */
-  --sg-orange: #FF5634;
-  --sg-orange-hover: #E64418;
-  --sg-orange-soft: #FFE4DC;
-  --sg-navy: #0E1430;
-  --sg-navy-2: #1A2247;
+  /* Brand (from singular.net) */
+  --sg-blue: #3088F4;
+  --sg-blue-hover: #1F6BD9;
+  --sg-blue-soft: #E1ECFF;
+  --sg-navy: #0F3384;
+  --sg-navy-2: #1A4099;
+  --sg-yellow: #FFB400;
+  --sg-cyan: #03C1FF;
+
+  /* Legacy aliases kept to avoid touching every component */
+  --sg-orange: var(--sg-blue);
+  --sg-orange-hover: var(--sg-blue-hover);
+  --sg-orange-soft: var(--sg-blue-soft);
 
   /* Surfaces */
-  --sg-bg: #F6F7FB;
+  --sg-bg: #F6F8FC;
   --sg-panel: #FFFFFF;
-  --sg-panel-soft: #FAFBFD;
-  --sg-border: #E5E7EE;
-  --sg-border-strong: #D2D5E0;
+  --sg-panel-soft: #F9FAFD;
+  --sg-border: #E2E6EF;
+  --sg-border-strong: #C9CFDC;
 
   /* Text */
-  --sg-fg: #0E1430;
-  --sg-fg-2: #4B5168;
-  --sg-fg-3: #8B8FA3;
+  --sg-fg: #0F3384;
+  --sg-fg-2: #4B5468;
+  --sg-fg-3: #8E9BB0;
 
   /* Status */
   --sg-success: #1FA168;
@@ -32,15 +39,15 @@
   --sg-warning-bg: #FFF4DD;
   --sg-error: #D6342B;
   --sg-error-bg: #FBE5E3;
-  --sg-info: #1F6BFF;
+  --sg-info: #3088F4;
   --sg-info-bg: #E1ECFF;
 
   /* Radius / Shadow */
   --sg-radius-sm: 6px;
   --sg-radius: 10px;
   --sg-radius-lg: 14px;
-  --sg-shadow-sm: 0 1px 2px rgba(14, 20, 48, 0.04);
-  --sg-shadow: 0 6px 24px -8px rgba(14, 20, 48, 0.10), 0 1px 2px rgba(14,20,48,0.04);
+  --sg-shadow-sm: 0 1px 2px rgba(15, 51, 132, 0.05);
+  --sg-shadow: 0 6px 24px -8px rgba(15, 51, 132, 0.12), 0 1px 2px rgba(15, 51, 132, 0.04);
 }
 
 body {
@@ -334,28 +341,25 @@ body {
     padding: 0.85rem 1.5rem;
   }
   .brand-lockup {
-    display: flex; align-items: center; gap: 0.65rem;
+    display: flex; align-items: center; gap: 0.7rem;
     font-family: 'Chivo', sans-serif;
     font-weight: 700;
-    color: var(--sg-fg);
+    color: var(--sg-navy);
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
   }
   .brand-mark {
-    width: 30px; height: 30px;
-    border-radius: 8px;
-    background: var(--sg-orange);
     display: grid; place-items: center;
-    color: white;
-    font-family: 'Chivo', sans-serif;
-    font-weight: 900;
-    font-size: 1rem;
+    /* kept as placeholder; real SVG logo is rendered inline */
   }
   .brand-service-inline {
     color: var(--sg-fg-2);
     font-weight: 500;
     font-size: 0.8rem;
     border-left: 1px solid var(--sg-border);
-    padding-left: 0.65rem;
-    margin-left: 0.3rem;
+    padding-left: 0.75rem;
+    margin-left: 0.25rem;
+    letter-spacing: 0;
   }
   .topnav-link {
     color: var(--sg-fg-2);
@@ -363,32 +367,33 @@ body {
     font-weight: 600;
     padding: 0.5rem 0.85rem;
     border-radius: var(--sg-radius-sm);
+    transition: all 0.15s ease;
   }
-  .topnav-link.active, .topnav-link:hover { color: var(--sg-orange); background: var(--sg-orange-soft); }
+  .topnav-link.active, .topnav-link:hover { color: var(--sg-blue); background: var(--sg-blue-soft); }
 }
 
 /* Shadcn base tokens (mapped to Singular palette) */
 @layer base {
   :root {
-    --background: 230 50% 98%;
-    --foreground: 230 53% 12%;
+    --background: 225 40% 98%;
+    --foreground: 222 80% 30%;
     --card: 0 0% 100%;
-    --card-foreground: 230 53% 12%;
+    --card-foreground: 222 80% 30%;
     --popover: 0 0% 100%;
-    --popover-foreground: 230 53% 12%;
-    --primary: 12 100% 60%;
+    --popover-foreground: 222 80% 30%;
+    --primary: 215 90% 57%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 230 20% 95%;
-    --secondary-foreground: 230 53% 12%;
-    --muted: 230 20% 95%;
-    --muted-foreground: 226 13% 45%;
-    --accent: 12 100% 96%;
-    --accent-foreground: 12 100% 38%;
+    --secondary: 225 30% 95%;
+    --secondary-foreground: 222 80% 30%;
+    --muted: 225 30% 95%;
+    --muted-foreground: 222 15% 45%;
+    --accent: 215 100% 95%;
+    --accent-foreground: 215 90% 40%;
     --destructive: 4 70% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 226 22% 91%;
-    --input: 226 22% 91%;
-    --ring: 12 100% 60%;
+    --border: 225 22% 91%;
+    --input: 225 22% 91%;
+    --ring: 215 90% 57%;
     --radius: 0.625rem;
   }
 }
@@ -405,7 +410,7 @@ body {
 
 .terminal-glow { text-shadow: 0 0 6px rgba(31, 161, 104, 0.45); }
 
-/* Utilities for orange swap on shadcn */
-.btn-orange { background: var(--sg-orange) !important; color: white !important; }
-.btn-orange:hover { background: var(--sg-orange-hover) !important; }
-.text-orange { color: var(--sg-orange); }
+/* Utilities for blue swap on shadcn */
+.btn-orange { background: var(--sg-blue) !important; color: white !important; }
+.btn-orange:hover { background: var(--sg-blue-hover) !important; }
+.text-orange { color: var(--sg-blue); }

@@ -6,6 +6,7 @@ import { CheckCircle, Circle, Clock, Warning, ShieldCheck, Chat, PaperPlaneTilt 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import SingularLogo from "@/components/SingularLogo";
 
 export default function PublicShare() {
   const { token } = useParams();
@@ -52,7 +53,7 @@ export default function PublicShare() {
       {/* Topnav */}
       <nav className="panel topnav max-w-[1300px] mx-auto mt-4 mx-3 lg:mx-auto">
         <div className="brand-lockup">
-          <span className="brand-mark">S</span>
+          <SingularLogo height={30} />
           <span>Singular</span>
           <span className="brand-service-inline">Customer Onboarding View · Read-only</span>
         </div>

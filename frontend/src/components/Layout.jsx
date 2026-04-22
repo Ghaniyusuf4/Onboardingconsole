@@ -3,6 +3,7 @@ import { useAuth } from "@/App";
 import { logout } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SignOut, BookOpen } from "@phosphor-icons/react";
+import SingularLogo from "@/components/SingularLogo";
 
 export default function Layout() {
   const { user, setUser } = useAuth();
@@ -18,7 +19,7 @@ export default function Layout() {
     <div className="min-h-screen bg-[var(--sg-bg)]" data-testid="layout">
       <nav className="panel topnav max-w-[1500px] mx-auto mt-4 mx-3 lg:mx-auto" data-testid="topnav">
         <NavLink to="/dashboard" className="brand-lockup">
-          <span className="brand-mark">S</span>
+          <SingularLogo height={30} />
           <span>Singular</span>
           <span className="brand-service-inline">Onboarding & Testing Console</span>
         </NavLink>

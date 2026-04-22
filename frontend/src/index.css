@@ -1,47 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Chivo:wght@400;500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ================== Singular Tokens ================== */
+/* ================== Singular Tokens (Singular Deck 2025) ================== */
 :root {
-  /* Brand (from singular.net) */
-  --sg-blue: #3088F4;
+  /* Brand */
+  --sg-blue: #3087F3;
   --sg-blue-hover: #1F6BD9;
-  --sg-blue-soft: #E1ECFF;
+  --sg-blue-soft: #E2EAF6;
+  --sg-blue-mist: #F8FBFF;
   --sg-navy: #0F3384;
   --sg-navy-2: #1A4099;
-  --sg-yellow: #FFB400;
-  --sg-cyan: #03C1FF;
 
-  /* Legacy aliases kept to avoid touching every component */
+  /* Extended accents (from Singular 2025 deck) */
+  --sg-cyan: #03C1FF;
+  --sg-yellow: #FFB400;
+  --sg-accent-orange: #FF783F;
+  --sg-pink: #E74068;
+  --sg-teal: #00D0B2;
+  --sg-indigo: #4C4FEE;
+
+  /* Legacy aliases (kept so existing classes inherit blue) */
   --sg-orange: var(--sg-blue);
   --sg-orange-hover: var(--sg-blue-hover);
   --sg-orange-soft: var(--sg-blue-soft);
 
   /* Surfaces */
-  --sg-bg: linear-gradient(180deg, #EEF3FB 0%, #F6F8FC 200px);
+  --sg-bg: var(--sg-blue-mist);
   --sg-bg-solid: #F0F5FC;
   --sg-panel: #FFFFFF;
-  --sg-panel-soft: #F4F7FC;
-  --sg-border: #E2E6EF;
-  --sg-border-strong: #C9CFDC;
+  --sg-panel-soft: var(--sg-blue-mist);
+  --sg-border: #E2EAF6;
+  --sg-border-strong: #C9D6EA;
 
   /* Text */
-  --sg-fg: #0F3384;
-  --sg-fg-2: #4B5468;
-  --sg-fg-3: #8E9BB0;
+  --sg-fg: var(--sg-navy);
+  --sg-fg-2: #2C3543;
+  --sg-fg-3: #9E9E9E;
 
   /* Status */
-  --sg-success: #1FA168;
-  --sg-success-bg: #E2F5EC;
+  --sg-success: #00D0B2;
+  --sg-success-bg: #E0FBF6;
   --sg-warning: #C77A00;
   --sg-warning-bg: #FFF4DD;
-  --sg-error: #D6342B;
-  --sg-error-bg: #FBE5E3;
-  --sg-info: #3088F4;
-  --sg-info-bg: #E1ECFF;
+  --sg-error: #E74068;
+  --sg-error-bg: #FCE3EA;
+  --sg-info: var(--sg-blue);
+  --sg-info-bg: var(--sg-blue-soft);
 
   /* Radius / Shadow */
   --sg-radius-sm: 6px;
@@ -53,19 +60,19 @@
 
 body {
   margin: 0;
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: 'Poppins', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background:
-    radial-gradient(1200px 600px at 90% -100px, rgba(48, 136, 244, 0.12), transparent 60%),
-    radial-gradient(900px 500px at -10% 200px, rgba(3, 193, 255, 0.10), transparent 60%),
-    linear-gradient(180deg, #EEF3FB 0%, #F0F5FC 100%);
+    radial-gradient(1200px 600px at 90% -100px, rgba(48, 135, 243, 0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 200px, rgba(3, 193, 255, 0.08), transparent 60%),
+    linear-gradient(180deg, #F8FBFF 0%, #F0F5FC 100%);
   background-attachment: fixed;
   color: var(--sg-fg);
   min-height: 100vh;
 }
 
-.font-display { font-family: 'Chivo', sans-serif; }
+.font-display { font-family: 'Poppins', sans-serif; font-weight: 700; }
 .font-mono { font-family: 'JetBrains Mono', monospace; }
 
 /* ================== Singular Utility Classes ================== */
@@ -416,7 +423,44 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--sg-border-strong); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--sg-fg-3); }
 
-.terminal-glow { text-shadow: 0 0 6px rgba(31, 161, 104, 0.45); }
+.terminal-glow { text-shadow: 0 0 6px rgba(0, 208, 178, 0.45); }
+
+/* ================== Public Share Feedback Banner ================== */
+.feedback-banner {
+  position: relative;
+  border-radius: var(--sg-radius-lg);
+  background: linear-gradient(135deg, var(--sg-blue-soft) 0%, #FFFFFF 100%);
+  border: 2px solid var(--sg-blue);
+  box-shadow: 0 8px 24px -8px rgba(48, 135, 243, 0.25);
+  overflow: hidden;
+}
+.feedback-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(600px 200px at 100% 50%, rgba(48, 135, 243, 0.08), transparent 60%);
+  pointer-events: none;
+}
+.feedback-banner-inner {
+  position: relative;
+  padding: 1.5rem 1.75rem;
+  z-index: 1;
+}
+.feedback-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: var(--sg-blue);
+  color: white;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -2px rgba(48, 135, 243, 0.4);
+  animation: feedback-pulse 2.4s ease-in-out infinite;
+}
+@keyframes feedback-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 12px -2px rgba(48, 135, 243, 0.4); }
+  50%      { transform: scale(1.05); box-shadow: 0 6px 18px -2px rgba(48, 135, 243, 0.6); }
+}
 
 /* ================== Project Hero & Tabs ================== */
 .project-hero {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
-import { CheckCircle, Circle, Clock, Warning, ShieldCheck, Chat, PaperPlaneTilt } from "@phosphor-icons/react";
+import { CheckCircle, Circle, Clock, Warning, ShieldCheck, Chat, PaperPlaneTilt, ArrowDown } from "@phosphor-icons/react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -89,6 +89,31 @@ export default function PublicShare() {
           <div className="wf-step"><div className="wf-num">2</div><div className="wf-body"><strong>Integrate</strong><p>SDK basic integration and partner configuration.</p></div></div>
           <div className="wf-step"><div className="wf-num">3</div><div className="wf-body"><strong>Validate &amp; Launch</strong><p>Live testing, attribution verification, and SKAN launch.</p></div></div>
         </section>
+
+        {/* Leave Feedback CTA banner */}
+        <section className="feedback-banner">
+          <div className="feedback-banner-inner">
+            <div className="flex items-start gap-4">
+              <div className="feedback-icon">
+                <Chat weight="fill" className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="badge badge-info">Two-way collaboration</span>
+                </div>
+                <h2 className="font-display font-bold text-xl text-[var(--sg-fg)]">Got questions or blockers? Tell your CSM.</h2>
+                <p className="text-sm text-[var(--sg-fg-2)] mt-1.5 max-w-2xl">
+                  Click <strong>Add comment</strong> on any task below to send a message directly to your Customer Success Manager. They'll see it instantly in their tracker — no email needed.
+                </p>
+              </div>
+              <a href="#tasks" className="button button-primary h-10 hidden md:inline-flex">
+                Jump to tasks <ArrowDown weight="bold" className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <div id="tasks" />
 
         {/* Status */}
         <section className="panel p-6">
@@ -184,7 +209,7 @@ function TaskWithComments({ task, STATUS_BADGE, ttot, tdone, token, authorName, 
   };
 
   return (
-    <div className="panel-soft p-4" data-testid={`share-task-${task.id}`}>
+    <div className={`panel-soft p-4 transition-all ${expanded ? "ring-2 ring-[var(--sg-blue)]/30 bg-white" : ""}`} data-testid={`share-task-${task.id}`}>
       <div className="flex items-center gap-3">
         {task.status === "closed" ? <ShieldCheck weight="fill" className="w-5 h-5 text-[var(--sg-success)]" /> : <Circle weight="bold" className="w-5 h-5 text-[var(--sg-fg-3)]" />}
         <div className="flex-1 min-w-0">
@@ -193,10 +218,17 @@ function TaskWithComments({ task, STATUS_BADGE, ttot, tdone, token, authorName, 
         </div>
         {ttot > 0 && <span className="font-mono text-xs text-[var(--sg-fg-3)]">{tdone}/{ttot}</span>}
         <span className={STATUS_BADGE[task.status]}>{task.status.replace("_", " ")}</span>
-        <button onClick={() => setExpanded(!expanded)} data-testid={`toggle-comments-${task.id}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--sg-fg-2)] hover:text-[var(--sg-orange)] px-2 py-1 rounded hover:bg-white">
-          <Chat weight="bold" className="w-3.5 h-3.5" />
-          {count > 0 ? <span className="text-[var(--sg-orange)]">{count}</span> : "Comment"}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          data-testid={`toggle-comments-${task.id}`}
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${
+            count > 0
+              ? "bg-[var(--sg-blue-soft)] text-[var(--sg-blue)] hover:bg-[var(--sg-blue)] hover:text-white"
+              : "bg-white border border-[var(--sg-border-strong)] text-[var(--sg-fg-2)] hover:border-[var(--sg-blue)] hover:text-[var(--sg-blue)]"
+          }`}
+        >
+          <Chat weight="fill" className="w-3.5 h-3.5" />
+          {count > 0 ? <><span>{count}</span><span className="hidden md:inline">comment{count !== 1 ? "s" : ""}</span></> : <span>Add comment</span>}
         </button>
       </div>
       {expanded && (
@@ -204,7 +236,7 @@ function TaskWithComments({ task, STATUS_BADGE, ttot, tdone, token, authorName, 
           {task.comments?.map(c => (
             <div key={c.id} className="flex gap-2">
               <Avatar className="w-7 h-7 mt-0.5">
-                <AvatarFallback className="bg-[var(--sg-orange)] text-white text-[10px] font-bold">{c.author_name[0].toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="bg-[var(--sg-blue)] text-white text-[10px] font-bold">{c.author_name[0].toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0 bg-white border border-[var(--sg-border)] rounded-md p-2.5">
                 <div className="flex items-baseline gap-2 text-xs">
@@ -215,26 +247,31 @@ function TaskWithComments({ task, STATUS_BADGE, ttot, tdone, token, authorName, 
               </div>
             </div>
           ))}
-          <div className="bg-white border border-[var(--sg-border)] rounded-md p-3 space-y-2">
+          <div className="bg-white border-2 border-[var(--sg-blue)]/20 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <PaperPlaneTilt weight="fill" className="w-4 h-4 text-[var(--sg-blue)]" />
+              <span className="text-sm font-semibold text-[var(--sg-fg)]">Add your comment to your CSM</span>
+            </div>
             <input
               data-testid={`author-name-${task.id}`}
               type="text"
               value={authorName}
               onChange={(e) => onAuthorChange(e.target.value)}
               placeholder="Your name"
-              className="w-full text-sm px-2 py-1.5 border border-[var(--sg-border)] rounded focus:outline-none focus:border-[var(--sg-orange)]"
+              className="w-full text-sm px-3 py-2 border border-[var(--sg-border)] rounded-md focus:outline-none focus:border-[var(--sg-blue)] focus:ring-2 focus:ring-[var(--sg-blue)]/20"
             />
             <textarea
               data-testid={`comment-body-${task.id}`}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Add a comment for your CSM (e.g. 'We need help with SKAN setup')…"
-              rows={2}
-              className="w-full text-sm px-2 py-1.5 border border-[var(--sg-border)] rounded focus:outline-none focus:border-[var(--sg-orange)] resize-none"
+              placeholder="What would you like your CSM to know? (e.g. 'We need help with SKAN setup')…"
+              rows={3}
+              className="w-full text-sm px-3 py-2 border border-[var(--sg-border)] rounded-md focus:outline-none focus:border-[var(--sg-blue)] focus:ring-2 focus:ring-[var(--sg-blue)]/20 resize-none"
             />
-            <div className="flex justify-end">
-              <button onClick={submit} disabled={busy} className="button button-primary h-8 text-xs px-3" data-testid={`post-comment-${task.id}`}>
-                <PaperPlaneTilt weight="bold" className="w-3.5 h-3.5" /> {busy ? "Posting…" : "Send to CSM"}
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-[var(--sg-fg-3)]">Your CSM is notified instantly</span>
+              <button onClick={submit} disabled={busy} className="button button-primary h-9 text-sm px-4" data-testid={`post-comment-${task.id}`}>
+                <PaperPlaneTilt weight="fill" className="w-4 h-4" /> {busy ? "Sending…" : "Send to CSM"}
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-export default function SingularLogo({ color = "#3088F4", className = "", height = 28 }) {
+export default function SingularLogo({ color = "#3087F3", className = "", height = 28 }) {
   return (
     <svg
       viewBox="0 0 84 82"

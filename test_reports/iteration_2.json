@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 2: verified new APK static audit + 3 GuidancePanel components, plus full iteration_1 regression. Backend 16/16 pytest pass (added 2 audit tests: non-zip graceful + synthetic Singular-SDK zip). Frontend 11/11 checks pass: all 3 guidance panels render with 4 numbered steps, APK upload returns populated audit (has_singular_sdk=true, sdk_version=12.3.1), ApkAuditReport shows 7 findings/row, all 7 tabs + tracker kanban still work.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/projects/{id}/apk", "issue": "APK upload reads full file into memory (await file.read()) before storage + audit. Fine for <200MB cap but add explicit size guard before reading to avoid OOM on malicious uploads."},
+      {"endpoint": "/api/singular/test-console", "issue": "(carried from iter1) status_code uses fragile `dir()` introspection; consider sentinel pattern used in /singular/attribution."},
+      {"endpoint": "/api/projects/{id}", "issue": "(carried from iter1) DELETE returns 200 when project_id doesn't exist; should 404 for idempotency observability."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Attribution / Testing tabs", "issues": ["GuidancePanel summary uses `truncate` which hides most of the summary on narrow viewports — consider `line-clamp-2` or letting it wrap"]},
+      {"screen": "New Project Dialog", "issues": ["(carried from iter1) Missing aria-describedby → a11y console warning"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "None blocking. Optional polish: (a) add per-route upload size cap on /apk, (b) address 3 minor backend nits carried from iter1, (c) relax GuidancePanel summary truncation."
+  ],
+  "critical_code_review_comments": [
+    "apk_audit.audit() is pure + exception-safe (wrapped in try at caller too) — good defensive design. findings list is stable order which keeps data-testid `audit-finding-{i}` deterministic.",
+    "_VERSION_PATTERNS use re.compile at module scope — efficient. Detection correctly returned 12.3.1 from synthetic bytes (`SDK_VERSION = \"12.3.1\"`).",
+    "ApkUpload.jsx: defaultOpen={files.length === 0} is smart UX — guidance auto-open for new projects, collapses once user has uploads.",
+    "GuidancePanel toggle button wraps icon+title+caret; Playwright clicks on child elements occasionally didn't register (needed locator-based click with waits). Consider stopPropagation inside toggle or adding pointer-events: none to inner SVG children to make click target more reliable.",
+    "server.py now at ~580 lines (was 520). Still manageable; plan the routers split (auth/projects/apk/singular) when it crosses 700.",
+    "Audit result stored in Mongo as-is — fine today (findings array is small), but if audit grows, consider a separate apk_audits collection and a lean summary on apk_uploads."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_backend.py"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100% (11/11 core checks)"},
+  "test_credentials": "Seeded via mongosh: T1_TOKEN=sess_t1_1776837546275 (user test-user-t1-1776837546275), T2_TOKEN=sess_t2_1776837546275 for isolation.",
+  "seed_data_creation": "Two user/user_sessions inserted per /app/auth_testing.md. Projects TEST_Iter2_UI, TEST_Iter2_UI2, TEST_Proj, TEST_AuditProj, TEST_DelProj created via API during tests; TEST_Proj + TEST_AuditProj + TEST_DelProj auto-cleaned by tests. Left behind: TEST_Iter2_UI*, owned by test user (safe to ignore).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run: T1_TOKEN=<t> T2_TOKEN=<t2> pytest /app/backend/tests/test_backend.py -v. Two new APK audit tests added: test_apk_upload_list_non_zip (graceful bad archive) and test_apk_upload_audit_detects_singular (synthetic zip with com/singular/sdk/ markers + SDK_VERSION constant → expects has_singular_sdk=True, sdk_version=12.3.1, findings list with 'Singular SDK classes present' + 'Singular SDK version discovered' ok=true). Frontend data-testids to rely on: testing-console-guidance, attribution-guidance, apk-upload-guidance (each with `-toggle` and `-step-{i}`), apk-audit-report, audit-finding-{i}. Tab testids: tab-overview/tracker/testing/copilot/attribution/apk/import/comments. Project route is /projects/:id NOT /project/:id.",
+  "rca of the issue": "No blockers. One flaky-click observation: first click on GuidancePanel toggle occasionally hit the inner <svg> child and didn't bubble to the button's onClick in Playwright force-click mode. Retrying via Locator API worked reliably. Not a product bug — just a testing tip. Everything else behaves exactly per the review request."
+}

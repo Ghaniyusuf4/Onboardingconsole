@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { CloudArrowUp, FileArchive, CheckCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import GuidancePanel from "./GuidancePanel";
+import ApkAuditReport from "./ApkAuditReport";
 
 const fmtBytes = (b) => {
   if (!b) return "—";
@@ -51,6 +53,18 @@ export default function ApkUpload({ project }) {
 
   return (
     <div className="space-y-5" data-testid="apk-upload-tab">
+      <GuidancePanel
+        testId="apk-upload-guidance"
+        title="How the APK / AAB audit works"
+        summary="Uploads are scanned server-side for Singular SDK presence, version, and required manifest permissions."
+        defaultOpen={files.length === 0}
+        steps={[
+          { label: "Build a debug APK or AAB", body: "Generate the artifact from Android Studio (Build → Generate Signed Bundle/APK) or ./gradlew assembleDebug. Files up to 200 MB supported.", href: "https://support.singular.net/hc/en-us/articles/360039024471" },
+          { label: "Drop it in here", body: "The file streams directly into object storage. Once uploaded, the server unzips it, parses AndroidManifest.xml, and scans every classes*.dex for Singular SDK signatures (com.singular.sdk.*)." },
+          { label: "Review the audit report", body: "Each upload gets a pass/fail checklist: archive validity, SDK classes found, SDK version discovered, and required permissions (INTERNET, AD_ID, ACCESS_NETWORK_STATE). Red rows point at what to fix before running the live test." },
+          { label: "Kick off the Live Testing Console", body: "Once the audit is green, switch to the Testing tab with the SDK key saved here, enter the device's advertising ID and hit Trigger Test Session." },
+        ]}
+      />
       {/* 5-step grid */}
       <section className="panel p-6">
         <div className="section-head">
@@ -119,15 +133,22 @@ export default function ApkUpload({ project }) {
         <div className="space-y-2">
           {files.length === 0 && <div className="text-sm text-[var(--sg-fg-3)] panel-soft p-8 text-center">No APKs uploaded yet.</div>}
           {files.map(f => (
-            <div key={f.id} data-testid={`apk-row-${f.id}`} className="panel-soft p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-md bg-[var(--sg-orange-soft)] grid place-items-center text-[var(--sg-orange)] flex-shrink-0">
-                <FileArchive weight="bold" className="w-5 h-5" />
+            <div key={f.id} data-testid={`apk-row-${f.id}`} className="panel-soft p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-[var(--sg-orange-soft)] grid place-items-center text-[var(--sg-orange)] flex-shrink-0">
+                  <FileArchive weight="bold" className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-[var(--sg-fg)] truncate">{f.filename}</div>
+                  <div className="text-xs text-[var(--sg-fg-3)] font-mono">{fmtBytes(f.size)} · {new Date(f.uploaded_at).toLocaleString()}</div>
+                </div>
+                {f.audit?.has_singular_sdk
+                  ? <span className="badge badge-success"><CheckCircle weight="bold" className="w-3 h-3" />SDK v{f.audit.sdk_version || "found"}</span>
+                  : f.audit
+                    ? <span className="badge badge-error">SDK not detected</span>
+                    : <span className="badge badge-success"><CheckCircle weight="bold" className="w-3 h-3" />Stored</span>}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-[var(--sg-fg)] truncate">{f.filename}</div>
-                <div className="text-xs text-[var(--sg-fg-3)] font-mono">{fmtBytes(f.size)} · {new Date(f.uploaded_at).toLocaleString()}</div>
-              </div>
-              <span className="badge badge-success"><CheckCircle weight="bold" className="w-3 h-3" />Stored</span>
+              {f.audit && <ApkAuditReport audit={f.audit} />}
             </div>
           ))}
         </div>

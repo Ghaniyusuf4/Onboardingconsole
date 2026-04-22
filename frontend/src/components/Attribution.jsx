@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MagnifyingGlass, ShieldCheck, XCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import GuidancePanel from "./GuidancePanel";
 
 export default function Attribution({ project }) {
   const [apiKey, setApiKey] = useState(project.api_key || "");
@@ -43,6 +44,18 @@ export default function Attribution({ project }) {
 
   return (
     <div className="space-y-5" data-testid="attribution-tab">
+      <GuidancePanel
+        testId="attribution-guidance"
+        title="How to verify attribution"
+        summary="Queries Singular's Attribution Details API to look up the attribution record for a single device."
+        defaultOpen={!project.api_key}
+        steps={[
+          { label: "Get a Reporting API Key", body: "In Singular Dashboard → Developer Tools → API Keys, generate or copy a Reporting API key. It's different from the SDK key and grants read access to attribution data.", href: "https://support.singular.net/hc/en-us/articles/360035214891" },
+          { label: "Pick the device identifier", body: "Use exactly the same ID type the SDK reports: advertising_id (GAID) or android_id for Android, idfa or idfv for iOS. Use lowercase UUID format (hyphenated) and match the device that has the install." },
+          { label: "Optional: scope to an app", body: "Pass the app bundle (e.g. com.example.app) to narrow the search when the device has multiple installs across your apps." },
+          { label: "Read the response", body: "A green OK badge means an attribution record was found. 4xx means the key is wrong or the device is not attributed to any campaign. The raw payload from Singular is shown below each query.", href: "https://support.singular.net/hc/en-us/articles/360033676072" },
+        ]}
+      />
       <section className="panel p-6 lg:p-8">
         <div className="section-head">
           <div>

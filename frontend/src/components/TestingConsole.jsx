@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Play, ArrowsClockwise, Terminal, ShieldCheck } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import GuidancePanel from "./GuidancePanel";
 
 export default function TestingConsole({ project }) {
   const [sdkKey, setSdkKey] = useState(project.sdk_key || "");
@@ -42,6 +43,18 @@ export default function TestingConsole({ project }) {
 
   return (
     <div className="space-y-5" data-testid="testing-console">
+      <GuidancePanel
+        testId="testing-console-guidance"
+        title="How to use the Live Testing Console"
+        summary="Triggers Singular's start_session endpoint to validate SDK integration on a real device."
+        defaultOpen={!project.sdk_key}
+        steps={[
+          { label: "Get the SDK Key", body: "In Singular Dashboard → Developer Tools → SDK Integration → pick your app. Copy the SDK Key (looks like 'abc123…'). Paste it below and hit Save so the project remembers it.", href: "https://support.singular.net/hc/en-us/articles/115001373503" },
+          { label: "Grab the test device's Advertising ID", body: "On Android the GAID is in Settings → Google → Ads. On iOS use IDFA/IDFV from the device. Must match the device that is running your build — otherwise the session won't be found.", href: "https://support.singular.net/hc/en-us/articles/360039280932" },
+          { label: "Launch the app once", body: "Open the build with the Singular SDK at least once so it registers an install. Then press Trigger Test Session here — log entries appear in the terminal within a few seconds." },
+          { label: "Verify the checklist", body: "Tick through the SDK validation checklist on the left — session start, install event, custom user ID, revenue, deep links, SKAN. Each failure shows a red status code in the terminal." },
+        ]}
+      />
       {/* Workflow strip */}
       <section className="workflow-strip">
         <div className="wf-step">

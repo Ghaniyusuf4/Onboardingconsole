@@ -14,6 +14,7 @@ from typing import List, Optional, Any, Dict
 import uuid
 import requests
 from datetime import datetime, timezone, timedelta
+from apk_audit import audit as audit_apk_bytes
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -553,6 +554,14 @@ async def upload_apk(project_id: str, request: Request, file: UploadFile = File(
     except Exception as e:
         logging.error(f"APK upload failed: {e}")
         raise HTTPException(500, f"Storage upload failed: {e}")
+
+    # Static audit — never fail the upload if the audit blows up.
+    try:
+        audit = audit_apk_bytes(data, file.filename)
+    except Exception as e:
+        logging.exception("APK audit failed")
+        audit = {"errors": [f"Audit failed: {e}"], "has_singular_sdk": False, "findings": []}
+
     rec = {
         "id": str(uuid.uuid4()),
         "project_id": project_id,
@@ -560,7 +569,8 @@ async def upload_apk(project_id: str, request: Request, file: UploadFile = File(
         "filename": file.filename,
         "size": size,
         "storage_path": actual_path,
-        "uploaded_at": datetime.now(timezone.utc).isoformat()
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "audit": audit,
     }
     await db.apk_uploads.insert_one(rec)
     rec.pop("_id", None)

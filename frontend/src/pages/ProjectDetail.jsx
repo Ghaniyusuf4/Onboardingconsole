@@ -13,6 +13,7 @@ import ApkUpload from "@/components/ApkUpload";
 import Overview from "@/components/Overview";
 import CommentsTab from "@/components/CommentsTab";
 import SECopilot from "@/components/SECopilot";
+import HistoricalImport from "@/components/HistoricalImport";
 import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
 
 export default function ProjectDetail() {
@@ -114,6 +115,7 @@ export default function ProjectDetail() {
           </TabsTrigger>
           <TabsTrigger data-testid="tab-attribution" value="attribution" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Attribution</TabsTrigger>
           <TabsTrigger data-testid="tab-apk" value="apk" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">APK Uploads</TabsTrigger>
+          <TabsTrigger data-testid="tab-import" value="import" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none">Historical Import</TabsTrigger>
           <TabsTrigger data-testid="tab-comments" value="comments" className="data-[state=active]:bg-[var(--sg-orange-soft)] data-[state=active]:text-[var(--sg-orange)] data-[state=active]:shadow-none gap-2">
             Comments
             {unread > 0 && <span className="bg-[var(--sg-orange)] text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full" data-testid="comments-unread-badge">{unread}</span>}
@@ -125,6 +127,7 @@ export default function ProjectDetail() {
         <TabsContent value="copilot" className="mt-5"><SECopilot project={project} /></TabsContent>
         <TabsContent value="attribution" className="mt-5"><Attribution project={project} /></TabsContent>
         <TabsContent value="apk" className="mt-5"><ApkUpload project={project} /></TabsContent>
+        <TabsContent value="import" className="mt-5"><HistoricalImport project={project} /></TabsContent>
         <TabsContent value="comments" className="mt-5"><CommentsTab project={project} /></TabsContent>
       </Tabs>
 

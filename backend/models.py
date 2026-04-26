@@ -94,3 +94,64 @@ class CommentIn(BaseModel):
     task_id: str
     author_name: str
     body: str
+
+
+# ── Phase 2: Customer contacts ────────────────────────────────────────────────
+
+class CustomerContact(BaseModel):
+    contact_id: str = Field(default_factory=lambda: f"contact_{uuid.uuid4().hex[:12]}")
+    project_id: str
+    name: str
+    email: str
+    role: Optional[str] = None         # e.g. "Technical Lead", "PM"
+    slack_user_id: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class CustomerContactCreate(BaseModel):
+    name: str
+    email: str
+    role: Optional[str] = None
+    slack_user_id: Optional[str] = None
+
+
+class CustomerContactUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    slack_user_id: Optional[str] = None
+
+
+# ── Phase 2: Action items ─────────────────────────────────────────────────────
+
+class ActionItem(BaseModel):
+    item_id: str = Field(default_factory=lambda: f"item_{uuid.uuid4().hex[:12]}")
+    project_id: str
+    title: str
+    description: Optional[str] = None
+    assigned_to_contact_id: Optional[str] = None
+    due_date: Optional[str] = None     # ISO date string
+    status: str = "open"               # open | in_progress | done
+    priority: str = "medium"           # low | medium | high | critical
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class ActionItemCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    assigned_to_contact_id: Optional[str] = None
+    due_date: Optional[str] = None
+    priority: str = "medium"
+
+
+class ActionItemUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    assigned_to_contact_id: Optional[str] = None
+    due_date: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+
+
+class GoLiveDateUpdate(BaseModel):
+    go_live_date: Optional[str] = None  # ISO date string, None to clear

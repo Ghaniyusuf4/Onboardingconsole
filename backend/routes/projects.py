@@ -10,11 +10,15 @@ from fastapi import APIRouter, HTTPException, Request
 from deps import db, get_current_user
 from health import compute_health
 from models import (
+    ActionItemCreate,
+    ActionItemUpdate,
     ChecklistUpdate,
     CommentIn,
+    GoLiveDateUpdate,
     Project,
     ProjectCreate,
     TaskUpdate,
+    ActionItem,
 )
 from template import build_default_phases
 
@@ -95,6 +99,8 @@ async def delete_project(project_id: str, request: Request):
     await db.apk_uploads.delete_many({"project_id": project_id})
     await db.test_runs.delete_many({"project_id": project_id})
     await db.task_comments.delete_many({"project_id": project_id})
+    await db.customer_contacts.delete_many({"project_id": project_id})
+    await db.action_items.delete_many({"project_id": project_id})
     return {"ok": True}
 
 
@@ -261,4 +267,131 @@ async def update_checklist(
                     if c["id"] == item_id:
                         c["done"] = payload.done
     await db.projects.update_one({"id": project_id}, {"$set": {"phases": doc["phases"]}})
+    return {"ok": True}
+
+
+# ---------- Go Live date ----------
+
+@router.put("/projects/{project_id}/go-live-date")
+async def set_go_live_date(project_id: str, payload: GoLiveDateUpdate, request: Request):
+    user = await get_current_user(request)
+    doc = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0, "id": 1})
+    if not doc:
+        raise HTTPException(404, "Project not found")
+    if payload.go_live_date is None:
+        await db.projects.update_one({"id": project_id}, {"$unset": {"go_live_date": ""}})
+    else:
+        await db.projects.update_one({"id": project_id}, {"$set": {"go_live_date": payload.go_live_date}})
+    return {"ok": True, "go_live_date": payload.go_live_date}
+
+
+# ---------- Action items ----------
+
+@router.get("/projects/{project_id}/action-items")
+async def list_action_items(project_id: str, request: Request):
+    user = await get_current_user(request)
+    doc = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0, "id": 1})
+    if not doc:
+        raise HTTPException(404, "Project not found")
+    items = await db.action_items.find(
+        {"project_id": project_id}, {"_id": 0}
+    ).sort("created_at", 1).to_list(500)
+    # Enrich with contact info for display
+    contact_ids = list({i["assigned_to_contact_id"] for i in items if i.get("assigned_to_contact_id")})
+    contact_map: dict = {}
+    if contact_ids:
+        contacts = await db.customer_contacts.find(
+            {"contact_id": {"$in": contact_ids}}, {"_id": 0, "contact_id": 1, "name": 1, "email": 1}
+        ).to_list(200)
+        contact_map = {c["contact_id"]: c for c in contacts}
+    for item in items:
+        cid = item.get("assigned_to_contact_id")
+        item["contact"] = contact_map.get(cid) if cid else None
+    return items
+
+
+@router.post("/projects/{project_id}/action-items", status_code=201)
+async def create_action_item(project_id: str, payload: ActionItemCreate, request: Request):
+    import os
+    user = await get_current_user(request)
+    doc = await db.projects.find_one(
+        {"id": project_id, "user_id": user.user_id},
+        {"_id": 0, "id": 1, "name": 1, "share_token": 1},
+    )
+    if not doc:
+        raise HTTPException(404, "Project not found")
+    item = ActionItem(project_id=project_id, **payload.model_dump())
+    item_doc = item.model_dump()
+    await db.action_items.insert_one(item_doc)
+    item_doc.pop("_id", None)
+
+    # Fire email + Slack alert to assigned contact (non-blocking)
+    if payload.assigned_to_contact_id:
+        contact = await db.customer_contacts.find_one(
+            {"contact_id": payload.assigned_to_contact_id}, {"_id": 0}
+        )
+        if contact:
+            from email_service import send_action_item_assigned
+            from routes.slack import send_contact_alert
+            project_name = doc.get("name", "your project")
+            share_token = doc.get("share_token")
+            share_url = (
+                f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/share/{share_token}"
+                if share_token else None
+            )
+            try:
+                await send_action_item_assigned(
+                    contact_email=contact["email"],
+                    contact_name=contact["name"],
+                    item_title=payload.title,
+                    due_date=payload.due_date,
+                    project_name=project_name,
+                    share_url=share_url,
+                )
+            except Exception:
+                pass
+            try:
+                await send_contact_alert(
+                    contact=contact,
+                    project_name=project_name,
+                    item_title=payload.title,
+                    due_date=payload.due_date,
+                    share_url=share_url,
+                )
+            except Exception:
+                pass
+
+    return item_doc
+
+
+@router.put("/projects/{project_id}/action-items/{item_id}")
+async def update_action_item(
+    project_id: str, item_id: str, payload: ActionItemUpdate, request: Request
+):
+    user = await get_current_user(request)
+    doc = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0, "id": 1})
+    if not doc:
+        raise HTTPException(404, "Project not found")
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(400, "No fields to update")
+    result = await db.action_items.update_one(
+        {"item_id": item_id, "project_id": project_id},
+        {"$set": updates},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Action item not found")
+    updated = await db.action_items.find_one({"item_id": item_id}, {"_id": 0})
+    return updated
+
+
+@router.delete("/projects/{project_id}/action-items/{item_id}")
+async def delete_action_item(project_id: str, item_id: str, request: Request):
+    user = await get_current_user(request)
+    doc = await db.projects.find_one({"id": project_id, "user_id": user.user_id}, {"_id": 0, "id": 1})
+    if not doc:
+        raise HTTPException(404, "Project not found")
+    result = await db.action_items.delete_one({"item_id": item_id, "project_id": project_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Action item not found")
     return {"ok": True}

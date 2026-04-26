@@ -8,7 +8,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from apk_audit import audit as audit_apk_bytes
-from deps import APP_NAME, db, get_current_user, get_object, put_object
+from deps import db, get_current_user, get_object, put_object
+
+APP_NAME = "singular-onboarding"
 
 router = APIRouter()
 

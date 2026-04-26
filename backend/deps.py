@@ -1,4 +1,4 @@
-"""Shared dependencies: MongoDB client, auth, object storage, Slack signature verification."""
+"""Shared dependencies: MongoDB client, auth, object storage (S3/local), Slack signature verification."""
 from __future__ import annotations
 
 import hashlib
@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import requests
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
 from fastapi import HTTPException, Request
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -25,50 +26,52 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-# --- Object storage ---
-STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
-APP_NAME = "singular-onboarding"
-storage_key: Optional[str] = None
+# --- Object storage (S3 or local fallback for dev) ---
+S3_BUCKET = os.environ.get("S3_BUCKET", "")
+S3_REGION = os.environ.get("AWS_REGION", "us-east-1")
+LOCAL_STORAGE_DIR = ROOT_DIR / "local_storage"
 
 
-def init_storage() -> Optional[str]:
-    global storage_key
-    if storage_key:
-        return storage_key
-    if not EMERGENT_KEY:
-        return None
-    try:
-        resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-        resp.raise_for_status()
-        storage_key = resp.json().get("storage_key")
-        return storage_key
-    except Exception as e:
-        logging.error(f"Storage init failed: {e}")
-        return None
+def init_storage() -> None:
+    if not S3_BUCKET:
+        LOCAL_STORAGE_DIR.mkdir(exist_ok=True)
+        logging.info("Object storage: local filesystem (set S3_BUCKET for S3)")
+    else:
+        logging.info(f"Object storage: S3 bucket '{S3_BUCKET}' in {S3_REGION}")
+
+
+def _s3() -> boto3.client:
+    return boto3.client("s3", region_name=S3_REGION)
 
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data,
-        timeout=180,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    if S3_BUCKET:
+        try:
+            _s3().put_object(Bucket=S3_BUCKET, Key=path, Body=data, ContentType=content_type)
+            return {"url": f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{path}"}
+        except (BotoCoreError, ClientError) as e:
+            logging.error(f"S3 put failed: {e}")
+            raise
+    # Local dev fallback
+    dest = LOCAL_STORAGE_DIR / path
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    return {"url": f"/api/apk/local/{path}"}
 
 
 def get_object(path: str):
-    key = init_storage()
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key},
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+    if S3_BUCKET:
+        try:
+            resp = _s3().get_object(Bucket=S3_BUCKET, Key=path)
+            return resp["Body"].read(), resp["ContentType"]
+        except (BotoCoreError, ClientError) as e:
+            logging.error(f"S3 get failed: {e}")
+            raise
+    # Local dev fallback
+    dest = LOCAL_STORAGE_DIR / path
+    if not dest.exists():
+        raise FileNotFoundError(f"Local file not found: {path}")
+    return dest.read_bytes(), "application/octet-stream"
 
 
 # --- Auth ---

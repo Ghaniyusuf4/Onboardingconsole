@@ -1,0 +1,60 @@
+services:
+  # ── Backend (FastAPI) ──────────────────────────────────────────────────────
+  - type: web
+    name: singular-onboarding-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: ENV
+        value: production
+      - key: MONGO_URL
+        sync: false          # set manually in Render dashboard
+      - key: DB_NAME
+        value: singular_onboarding
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: BACKEND_URL
+        sync: false          # set to your Render backend URL after first deploy
+      - key: FRONTEND_URL
+        sync: false          # set to your Render frontend URL after first deploy
+      - key: CORS_ORIGINS
+        sync: false          # same as FRONTEND_URL
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        value: onboarding@singular.net
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
+      - key: SLACK_DEFAULT_CHANNEL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+
+  # ── Frontend (React static site) ──────────────────────────────────────────
+  - type: web
+    name: singular-onboarding
+    runtime: static
+    buildCommand: cd frontend && npm install --legacy-peer-deps && npm run build
+    staticPublishPath: ./frontend/build
+    plan: free
+    envVars:
+      - key: REACT_APP_BACKEND_URL
+        sync: false          # set to your Render backend URL after first deploy
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

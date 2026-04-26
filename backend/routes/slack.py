@@ -1,10 +1,13 @@
-"""Slack slash-command + link-token routes."""
+"""Slack slash-command + link-token routes + outbound proactive alerts."""
 from __future__ import annotations
 
+import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import requests as http_requests
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -12,6 +15,74 @@ from deps import db, get_current_user, verify_slack_signature
 from health import compute_health
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
+SLACK_DEFAULT_CHANNEL = os.environ.get("SLACK_DEFAULT_CHANNEL", "")
+
+
+async def send_contact_alert(
+    contact: dict,
+    project_name: str,
+    item_title: str,
+    due_date: Optional[str],
+    share_url: Optional[str] = None,
+    is_reminder: bool = False,
+    days_until_due: Optional[int] = None,
+) -> None:
+    """Post a proactive Slack alert to a contact's linked Slack account or a default channel."""
+    if not SLACK_BOT_TOKEN:
+        logger.debug("SLACK_BOT_TOKEN not set — skipping Slack alert")
+        return
+
+    # Prefer DM to the contact's linked Slack user
+    channel = contact.get("slack_user_id") or SLACK_DEFAULT_CHANNEL
+    if not channel:
+        logger.debug("No Slack channel/user for contact %s — skipping", contact.get("email"))
+        return
+
+    if is_reminder and days_until_due is not None:
+        urgency = "today" if days_until_due <= 0 else f"in {days_until_due} day{'s' if days_until_due != 1 else ''}"
+        header_text = f":rotating_light: Action item due {urgency}"
+    else:
+        header_text = ":clipboard: New action item assigned to you"
+
+    blocks = [
+        {"type": "header", "text": {"type": "plain_text", "text": header_text}},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*{item_title}*\nProject: _{project_name}_"
+                        + (f"\nDue: `{due_date}`" if due_date else ""),
+            },
+        },
+    ]
+    if share_url:
+        blocks.append({
+            "type": "actions",
+            "elements": [{
+                "type": "button",
+                "text": {"type": "plain_text", "text": "View project"},
+                "url": share_url,
+                "style": "primary",
+            }],
+        })
+
+    payload = {"channel": channel, "blocks": blocks, "text": f"{header_text}: {item_title}"}
+    try:
+        resp = http_requests.post(
+            "https://slack.com/api/chat.postMessage",
+            json=payload,
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}", "Content-Type": "application/json"},
+            timeout=10,
+        )
+        data = resp.json()
+        if not data.get("ok"):
+            logger.warning("Slack postMessage failed: %s", data.get("error"))
+    except Exception as e:
+        logger.error("Slack alert request failed: %s", e)
+        raise
 
 
 def slack_response(text: str, blocks: Optional[list] = None, ephemeral: bool = True) -> dict:

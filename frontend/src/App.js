@@ -2,7 +2,7 @@ import { useEffect, useState, createContext, useContext } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import { fetchMe, exchangeSession } from "@/lib/api";
+import { fetchMe, exchangeSession, setToken } from "@/lib/api";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import ProjectDetail from "@/pages/ProjectDetail";
@@ -24,7 +24,8 @@ function AuthProvider({ children }) {
 
   useEffect(() => {
     // CRITICAL: Skip /me check while OAuth callback is in URL
-    if (window.location.hash?.includes("session_id=")) {
+    const hash = window.location.hash || "";
+    if (hash.includes("session_id=") || hash.includes("session_token=")) {
       setLoading(false);
       return;
     }
@@ -36,15 +37,25 @@ function AuthProvider({ children }) {
 
 function AuthCallback() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { setUser, refresh } = useAuth();
   useEffect(() => {
     const hash = window.location.hash || "";
-    const m = hash.match(/session_id=([^&]+)/);
-    if (!m) { navigate("/login"); return; }
-    const sid = m[1];
+
+    // New flow: session_token from our own OAuth callback
+    const tokenMatch = hash.match(/session_token=([^&]+)/);
+    if (tokenMatch) {
+      setToken(decodeURIComponent(tokenMatch[1]));
+      window.history.replaceState({}, "", "/dashboard");
+      refresh().then(() => navigate("/dashboard", { replace: true }));
+      return;
+    }
+
+    // Legacy Emergent flow: session_id exchange
+    const sidMatch = hash.match(/session_id=([^&]+)/);
+    if (!sidMatch) { navigate("/login"); return; }
     (async () => {
       try {
-        const u = await exchangeSession(sid);
+        const u = await exchangeSession(sidMatch[1]);
         setUser(u);
         window.history.replaceState({}, "", "/dashboard");
         navigate("/dashboard", { replace: true });
@@ -67,7 +78,7 @@ function AppRouter() {
   const location = useLocation();
   // CRITICAL: Detect session_id during render (prevents race conditions)
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  if (location.hash?.includes("session_id=")) return <AuthCallback />;
+  if (location.hash?.includes("session_id=") || location.hash?.includes("session_token=")) return <AuthCallback />;
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

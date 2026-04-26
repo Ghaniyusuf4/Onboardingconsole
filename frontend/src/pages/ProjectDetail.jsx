@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Share, Copy, Trash, House, Kanban, Lightning, Robot, Target, Package, Database, ChatCircleDots, ListChecks, Clock, ArrowUpRight } from "@phosphor-icons/react";
+import { ArrowLeft, Share, Copy, Trash, House, Kanban, Lightning, Robot, Target, Package, Database, ChatCircleDots, ListChecks, Clock, ArrowUpRight, Users, CheckSquare } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import Tracker from "@/components/Tracker";
 import TestingConsole from "@/components/TestingConsole";
@@ -16,16 +16,21 @@ import SECopilot from "@/components/SECopilot";
 import HistoricalImport from "@/components/HistoricalImport";
 import HealthGauge, { HealthBreakdown } from "@/components/HealthGauge";
 import SingularLogo from "@/components/SingularLogo";
+import GoLiveBanner from "@/components/GoLiveBanner";
+import ContactsTab from "@/components/ContactsTab";
+import ActionItemsTab from "@/components/ActionItemsTab";
 
 const TAB_META = {
-  overview:    { label: "Overview",         Icon: House,         color: "#3088F4" },
-  tracker:     { label: "Tracker",          Icon: Kanban,        color: "#0F3384" },
-  testing:     { label: "Live Testing",     Icon: Lightning,     color: "#03C1FF" },
-  copilot:     { label: "SE Co-Pilot",      Icon: Robot,         color: "#7C3AED", badge: "AI" },
-  attribution: { label: "Attribution",      Icon: Target,        color: "#1FA168" },
-  apk:         { label: "APK Uploads",      Icon: Package,       color: "#C77A00" },
-  import:      { label: "Historical Import",Icon: Database,      color: "#0077A8" },
-  comments:    { label: "Comments",         Icon: ChatCircleDots,color: "#FFB400" },
+  overview:     { label: "Overview",          Icon: House,          color: "#3088F4" },
+  tracker:      { label: "Tracker",           Icon: Kanban,         color: "#0F3384" },
+  contacts:     { label: "Contacts",          Icon: Users,          color: "#059669" },
+  actions:      { label: "Action Items",      Icon: CheckSquare,    color: "#f97316" },
+  testing:      { label: "Live Testing",      Icon: Lightning,      color: "#03C1FF" },
+  copilot:      { label: "SE Co-Pilot",       Icon: Robot,          color: "#7C3AED", badge: "AI" },
+  attribution:  { label: "Attribution",       Icon: Target,         color: "#1FA168" },
+  apk:          { label: "APK Uploads",       Icon: Package,        color: "#C77A00" },
+  import:       { label: "Historical Import", Icon: Database,       color: "#0077A8" },
+  comments:     { label: "Comments",          Icon: ChatCircleDots, color: "#FFB400" },
 };
 
 export default function ProjectDetail() {
@@ -140,6 +145,7 @@ export default function ProjectDetail() {
             </div>
 
             <div className="lg:col-span-2 space-y-3">
+              <GoLiveBanner project={project} onUpdated={reload} />
               {health && (
                 <div className="panel-soft p-5">
                   <div className="flex items-center justify-between">
@@ -185,6 +191,8 @@ export default function ProjectDetail() {
         </TabsList>
         <TabsContent value="overview" className="proj-tab-content"><Overview project={project} /></TabsContent>
         <TabsContent value="tracker" className="proj-tab-content"><Tracker project={project} reload={reload} commentCounts={commentCounts} apkAudit={{ detected: health?.apk_sdk_detected, version: health?.apk_sdk_version }} /></TabsContent>
+        <TabsContent value="contacts" className="proj-tab-content"><ContactsTab project={project} /></TabsContent>
+        <TabsContent value="actions" className="proj-tab-content"><ActionItemsTab project={project} /></TabsContent>
         <TabsContent value="testing" className="proj-tab-content"><TestingConsole project={project} /></TabsContent>
         <TabsContent value="copilot" className="proj-tab-content"><SECopilot project={project} /></TabsContent>
         <TabsContent value="attribution" className="proj-tab-content"><Attribution project={project} /></TabsContent>

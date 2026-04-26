@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+      - DB_NAME=singular_onboarding
+      - CORS_ORIGINS=http://localhost:3000
+      - ENV=development
+    depends_on:
+      - mongo
+    volumes:
+      # Mount local_storage for APK files in dev (no S3 needed)
+      - ./backend/local_storage:/app/local_storage
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_BACKEND_URL: http://localhost:8001
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:

@@ -6,7 +6,6 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
-    plan: free
     envVars:
       - key: ENV
         value: production
@@ -51,7 +50,6 @@ services:
     runtime: static
     buildCommand: cd frontend && npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./frontend/build
-    plan: free
     envVars:
       - key: REACT_APP_BACKEND_URL
         sync: false          # set to your Render backend URL after first deploy

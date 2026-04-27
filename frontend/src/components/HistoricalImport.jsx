@@ -1,12 +1,9 @@
-import { useState } from "react";
 import { ArrowSquareOut, Database, ShieldCheck, Copy, CheckCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 const IMPORT_URL = process.env.REACT_APP_IMPORT_PORTAL_URL || "https://singular-import-portal.vercel.app/login.html";
 
 export default function HistoricalImport({ project }) {
-  const [iframeKey, setIframeKey] = useState(0);
-
   const copyContext = async () => {
     const ctx = `Project: ${project.name} (${project.platform})\nCustomer: ${project.customer || "—"}`;
     await navigator.clipboard.writeText(ctx);
@@ -20,15 +17,15 @@ export default function HistoricalImport({ project }) {
         <div className="wf-step">
           <div className="wf-num">1</div>
           <div className="wf-body">
-            <strong>Sign In</strong>
-            <p>Authenticate to the Singular Historical Import Portal using your provided credentials.</p>
+            <strong>Copy Context</strong>
+            <p>Copy this project's context then open the Import Portal in a new tab.</p>
           </div>
         </div>
         <div className="wf-step">
           <div className="wf-num">2</div>
           <div className="wf-body">
-            <strong>Upload &amp; Configure</strong>
-            <p>Upload historical device-level data and configure S3 destination / mapping spec.</p>
+            <strong>Sign In &amp; Upload</strong>
+            <p>Authenticate, upload historical device-level data, and configure S3 destination / mapping spec.</p>
           </div>
         </div>
         <div className="wf-step">
@@ -43,23 +40,6 @@ export default function HistoricalImport({ project }) {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
         {/* Left rail */}
         <aside className="lg:col-span-1 space-y-4">
-          <section className="panel p-5">
-            <p className="eyebrow">Historical Import Portal</p>
-            <h3 className="font-display font-bold text-lg text-[var(--sg-fg)] mt-2 leading-tight">Device-level data import</h3>
-            <p className="text-xs text-[var(--sg-fg-2)] mt-2">Embedded Singular self-serve import portal. Sign in below to run a historical data import for this customer.</p>
-            <div className="flex flex-col gap-2 mt-4">
-              <button onClick={copyContext} className="button button-soft w-full justify-start" data-testid="copy-import-context">
-                <Copy weight="bold" className="w-4 h-4" /> Copy Project Context
-              </button>
-              <a href={IMPORT_URL} target="_blank" rel="noreferrer" className="button button-soft w-full justify-start" data-testid="open-portal-tab">
-                <ArrowSquareOut weight="bold" className="w-4 h-4" /> Open in New Tab
-              </a>
-              <button onClick={() => setIframeKey(k => k + 1)} className="button button-ghost w-full justify-start" data-testid="reset-portal">
-                Reset Session
-              </button>
-            </div>
-          </section>
-
           <section className="panel p-5">
             <p className="eyebrow">Pre-flight Checklist</p>
             <ul className="mt-3 space-y-2.5 text-sm text-[var(--sg-fg)]">
@@ -84,15 +64,15 @@ export default function HistoricalImport({ project }) {
             <div className="flex gap-2 mt-3">
               <ShieldCheck weight="fill" className="w-4 h-4 text-[var(--sg-success)] flex-shrink-0 mt-0.5" />
               <p className="text-xs text-[var(--sg-fg-2)] leading-relaxed">
-                The portal runs inside an isolated iframe. Your session and credentials stay on the portal's domain — they're not accessible to the Onboarding Console.
+                Your session and credentials stay on the portal's domain — they are not accessible to the Onboarding Console.
               </p>
             </div>
           </section>
         </aside>
 
-        {/* Right: embedded portal */}
+        {/* Right: launch panel */}
         <div className="lg:col-span-3">
-          <div className="panel overflow-hidden flex flex-col h-[800px]">
+          <div className="panel overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--sg-border)] bg-[var(--sg-panel-soft)]">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-md bg-[var(--sg-orange-soft)] grid place-items-center text-[var(--sg-orange)]">
@@ -103,20 +83,44 @@ export default function HistoricalImport({ project }) {
                   <div className="text-[11px] text-[var(--sg-fg-3)]">Self-serve · Device-level ingestion</div>
                 </div>
               </div>
-              <span className="badge badge-orange">Embedded</span>
+              <span className="badge badge-orange">External</span>
             </div>
-            <iframe
-              key={iframeKey}
-              src={IMPORT_URL}
-              title="Singular Historical Import Portal"
-              className="flex-1 w-full bg-white"
-              data-testid="import-iframe"
-              allow="clipboard-write; clipboard-read"
-            />
+
+            {/* Launch card */}
+            <div className="flex flex-col items-center justify-center gap-6 py-16 px-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--sg-orange-soft)] grid place-items-center text-[var(--sg-orange)]">
+                <Database weight="bold" className="w-8 h-8" />
+              </div>
+              <div className="max-w-md">
+                <h3 className="font-display font-bold text-xl text-[var(--sg-fg)]">Open the Import Portal</h3>
+                <p className="text-sm text-[var(--sg-fg-2)] mt-2 leading-relaxed">
+                  The portal opens in a new tab so login and file uploads work correctly.
+                  Copy this project's context first, then paste it into the portal after signing in.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+                <button
+                  onClick={copyContext}
+                  className="button button-soft flex-1 justify-center"
+                  data-testid="copy-import-context"
+                >
+                  <Copy weight="bold" className="w-4 h-4" /> Copy Project Context
+                </button>
+                <a
+                  href={IMPORT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="button button-primary flex-1 justify-center"
+                  data-testid="open-portal-tab"
+                >
+                  <ArrowSquareOut weight="bold" className="w-4 h-4" /> Open Portal
+                </a>
+              </div>
+              <p className="text-[11px] text-[var(--sg-fg-3)]">
+                Opens <code className="font-mono">{new URL(IMPORT_URL).hostname}</code> in a new tab
+              </p>
+            </div>
           </div>
-          <p className="text-[11px] text-[var(--sg-fg-3)] mt-2 px-1">
-            Embedded directly from <code className="font-mono">{new URL(IMPORT_URL).hostname}</code> · Your import credentials and uploads are handled by the portal, not stored in the Onboarding Console.
-          </p>
         </div>
       </div>
     </div>

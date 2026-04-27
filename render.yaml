@@ -48,9 +48,11 @@ services:
   - type: web
     name: singular-onboarding
     runtime: static
-    buildCommand: cd frontend && npm install --legacy-peer-deps && npm run build
+    buildCommand: cd frontend && npm install --legacy-peer-deps && npm install ajv@8 --legacy-peer-deps && npm run build
     staticPublishPath: ./frontend/build
     envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
       - key: REACT_APP_BACKEND_URL
         sync: false          # set to your Render backend URL after first deploy
     routes:

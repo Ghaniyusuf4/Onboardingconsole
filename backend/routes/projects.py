@@ -1,6 +1,7 @@
 """Project / tasks / comments / share-link routes."""
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Dict
@@ -8,6 +9,8 @@ from typing import Dict
 from fastapi import APIRouter, HTTPException, Request
 
 from deps import db, get_current_user
+
+logger = logging.getLogger(__name__)
 from health import compute_health
 from models import (
     ActionItemCreate,
@@ -348,8 +351,9 @@ async def create_action_item(project_id: str, payload: ActionItemCreate, request
                     project_name=project_name,
                     share_url=share_url,
                 )
-            except Exception:
-                pass
+                logger.info("Assignment email sent to %s", contact["email"])
+            except Exception as e:
+                logger.error("Assignment email failed: %s", e)
             try:
                 await send_contact_alert(
                     contact=contact,
@@ -358,8 +362,9 @@ async def create_action_item(project_id: str, payload: ActionItemCreate, request
                     due_date=payload.due_date,
                     share_url=share_url,
                 )
-            except Exception:
-                pass
+                logger.info("Slack alert sent for contact %s", contact.get("email"))
+            except Exception as e:
+                logger.error("Slack alert failed: %s", e)
 
     return item_doc
 
